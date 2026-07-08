@@ -1,0 +1,1063 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IEEE 33-Bus DNR Analyzer</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;--border:rgba(255,255,255,0.07);
+  --text:#e2e8f0;--muted:#7c8399;--accent:#6366f1;
+  --green:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
+  --teal:#14b8a6;--purple:#a855f7;--pink:#ec4899;
+  font-family:'Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+
+/* ── Shell ── */
+.shell{display:grid;grid-template-columns:240px 1fr;height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden}
+.sidebar-head{padding:14px 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sidebar-head h1{font-size:14px;font-weight:700;color:#fff;margin-bottom:2px}
+.sidebar-head p{font-size:10px;color:var(--muted);line-height:1.4}
+.sidebar-scroll{overflow-y:auto;flex:1;padding:10px 8px 16px}
+.slabel{font-size:9.5px;font-weight:700;letter-spacing:.09em;color:var(--muted);
+  text-transform:uppercase;padding:8px 6px 3px}
+.sc-btn{width:100%;text-align:left;background:transparent;border:1px solid transparent;
+  border-radius:7px;padding:7px 9px;cursor:pointer;color:var(--text);
+  font-size:11.5px;line-height:1.4;transition:all .15s;margin-bottom:2px}
+.sc-btn:hover{background:var(--bg3);border-color:var(--border)}
+.sc-btn.active{background:rgba(99,102,241,.18);border-color:var(--accent);color:#fff}
+.sc-btn .scl{font-weight:600;display:block;margin-bottom:1px}
+.sc-btn .scd{font-size:10px;color:var(--muted);display:block;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status-bar{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.dot.spin{background:var(--amber);animation:pulse .7s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ── Main scrollable area ── */
+.main{overflow-y:auto;padding:16px 20px 40px;display:flex;flex-direction:column;gap:18px;
+  background:var(--bg)}
+
+/* ── Pipeline stepper ── */
+.pipe{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px}
+.pipe-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.07em;margin-bottom:10px}
+.pipe-steps{display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:2px}
+.ps{flex-shrink:0;background:var(--bg3);border:1px solid var(--border);
+  border-radius:7px;padding:6px 10px;text-align:center;min-width:76px}
+.ps .pi{font-size:15px;margin-bottom:1px}
+.ps .pn{font-size:10px;font-weight:600;color:var(--text)}
+.ps .pb{font-size:9px;color:var(--muted)}
+.ps.act{border-color:var(--accent);background:rgba(99,102,241,.12)}
+.ps.done{border-color:var(--green);background:rgba(34,197,94,.06)}
+.pa{color:var(--muted);font-size:14px;padding:0 3px;flex-shrink:0}
+
+/* ── KPI strip ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:11px 13px}
+.kpi .kl{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;margin-bottom:3px}
+.kpi .kv{font-size:21px;font-weight:700;line-height:1.1;margin-bottom:1px}
+.kpi .ks{font-size:10px;color:var(--muted)}
+.kpi .kd{font-size:10.5px;font-weight:600;margin-top:3px}
+.dp{color:var(--green)}.dn{color:var(--red)}.dz{color:var(--muted)}
+
+/* ── Section headers ── */
+.sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.sec-head h2{font-size:13px;font-weight:700;color:#fff}
+.sec-head span{font-size:11px;color:var(--muted)}
+.sec-tag{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;
+  background:rgba(99,102,241,.2);color:var(--accent);margin-left:4px}
+
+/* ── Cards ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
+.card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.card-title .sub{font-size:10px;font-weight:500;color:var(--accent);
+  text-transform:none;letter-spacing:0}
+.before-after-tag{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:600;margin-left:4px}
+.ba-before{background:rgba(99,102,241,.2);color:#818cf8}
+.ba-after{background:rgba(34,197,94,.15);color:#4ade80}
+.ba-delta{background:rgba(239,68,68,.15);color:#f87171}
+
+/* ── Grid layouts ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+canvas{max-height:210px;width:100%!important}
+.canvas-full canvas{max-height:240px}
+
+/* ── Heatmap ── */
+.hm-wrap{overflow:auto;border-radius:7px;background:var(--bg3);padding:8px}
+.hm-wrap canvas{max-height:none!important;width:100%!important;height:auto!important}
+
+/* ── Divider ── */
+.divider{border:none;border-top:1px solid var(--border);margin:4px 0}
+
+/* ── Table ── */
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
+.tbl th{color:var(--muted);font-weight:600;padding:5px 8px;text-align:left;
+  border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase}
+.tbl td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
+.tbl tr:hover td{background:rgba(255,255,255,0.015)}
+.ibar{display:inline-block;height:5px;border-radius:3px;margin-right:5px;vertical-align:middle}
+
+/* ── RAG ── */
+.rag-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rag-card{border-radius:8px;padding:12px 14px;border-left:3px solid}
+.rh{background:rgba(239,68,68,.07);border-color:var(--red)}
+.rm{background:rgba(245,158,11,.07);border-color:var(--amber)}
+.rl{background:rgba(34,197,94,.07);border-color:var(--green)}
+.rt{font-size:12px;font-weight:700;margin-bottom:5px}
+.rh .rt{color:var(--red)}.rm .rt{color:var(--amber)}.rl .rt{color:var(--green)}
+.rx{font-size:11px;color:var(--text);line-height:1.65;margin-bottom:5px}
+.rc{font-size:10.5px;color:var(--muted);font-style:italic;line-height:1.5;margin-bottom:5px}
+.rr{font-size:11px;color:var(--teal);line-height:1.5}
+
+/* ── Findings ── */
+.findings-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.finding{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.finding .fk{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:4px}
+.finding .fv{font-size:12px;color:var(--text);font-weight:500}
+
+/* ── Topo svg ── */
+#topo-svg{width:100%;background:var(--bg3);border-radius:8px}
+
+/* ── Legend row ── */
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.leg{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted)}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.leg-line{width:20px;height:2px;border-radius:1px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ══ SIDEBAR ══ -->
+<div class="sidebar">
+  <div class="sidebar-head">
+    <h1>IEEE 33-Bus DNR</h1>
+    <p>Pandapower BFS · Real power flow<br>Before &amp; After · RAG Explainability</p>
+  </div>
+  <div class="sidebar-scroll">
+    <div class="slabel">Test Scenarios</div>
+    <div id="sc-list"></div>
+  </div>
+  <div class="status-bar">
+    <div class="dot" id="dot"></div>
+    <span id="stxt">Select a scenario</span>
+  </div>
+</div>
+
+<!-- ══ MAIN SCROLL ══ -->
+<div class="main" id="main">
+
+  <!-- Pipeline -->
+  <div class="pipe">
+    <div class="pipe-title">Analysis pipeline</div>
+    <div class="pipe-steps" id="pipe">
+      <div class="ps" id="fp0"><div class="pi">📋</div><div class="pn">Scenario</div><div class="pb">select</div></div>
+      <div class="pa">›</div>
+      <div class="ps" id="fp1"><div class="pi">⚡</div><div class="pn">S1 BFS</div><div class="pb">power flow</div></div>
+      <div class="pa">›</div>
+      <div class="ps" id="fp2"><div class="pi">📏</div><div class="pn">S2 Distance</div><div class="pb">elec. dist</div></div>
+      <div class="pa">›</div>
+      <div class="ps" id="fp3"><div class="pi">🌊</div><div class="pn">S3 Propagation</div><div class="pb">BII · VFI</div></div>
+      <div class="pa">›</div>
+      <div class="ps" id="fp4"><div class="pi">⚗️</div><div class="pn">S4 dV/dQ</div><div class="pb">sensitivity</div></div>
+      <div class="pa">›</div>
+      <div class="ps" id="fp5"><div class="pi">🗺️</div><div class="pn">S5 Zones</div><div class="pb">vulnerability</div></div>
+      <div class="pa">›</div>
+      <div class="ps" id="fp6"><div class="pi">🔢</div><div class="pn">S6 Indices</div><div class="pb">ECI·DPF</div></div>
+      <div class="pa">›</div>
+      <div class="ps" id="fp7"><div class="pi">🧠</div><div class="pn">RAG</div><div class="pb">explain</div></div>
+      <div class="pa">›</div>
+      <div class="ps" id="fp8"><div class="pi">✅</div><div class="pn">Done</div><div class="pb">visualize</div></div>
+    </div>
+  </div>
+
+  <!-- ══ KPI STRIP ══ -->
+  <div class="kpi-strip" id="kpis">
+    <div class="kpi"><div class="kl">Min Voltage</div><div class="kv" id="k-mv">—</div><div class="ks" id="k-mv-b">before: —</div><div class="kd" id="k-mv-d">—</div></div>
+    <div class="kpi"><div class="kl">Buses &lt; 0.95 pu</div><div class="kv" id="k-bv">—</div><div class="ks" id="k-bv-b">before: —</div><div class="kd" id="k-bv-d">—</div></div>
+    <div class="kpi"><div class="kl">Total P Loss</div><div class="kv" id="k-pl">—</div><div class="ks" id="k-pl-b">before: —</div><div class="kd" id="k-pl-d">—</div></div>
+    <div class="kpi"><div class="kl">Total Q Loss</div><div class="kv" id="k-ql">—</div><div class="ks" id="k-ql-b">before: —</div><div class="kd" id="k-ql-d">—</div></div>
+    <div class="kpi"><div class="kl">Max Branch Load</div><div class="kv" id="k-ml">—</div><div class="ks" id="k-ml-b">before: —</div><div class="kd" id="k-ml-d">—</div></div>
+  </div>
+
+  <!-- ══ S1 POWER FLOW ══ -->
+  <div class="card">
+    <div class="sec-head"><h2>S1 — Power Flow Results</h2><span>pandapower BFS · base vs scenario</span></div>
+
+    <div class="card-title">Voltage Profile — all 33 buses
+      <span class="before-after-tag ba-before">● before</span>
+      <span class="before-after-tag ba-after">● after</span>
+    </div>
+    <div class="g2" style="margin-bottom:14px">
+      <div><canvas id="c-vprofile"></canvas></div>
+      <div><canvas id="c-dv"></canvas></div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">Branch Loading %
+      <span class="before-after-tag ba-before">● before</span>
+      <span class="before-after-tag ba-after">● after</span>
+      <span class="before-after-tag ba-delta">● delta</span>
+    </div>
+    <div class="g2" style="margin-bottom:14px">
+      <div><canvas id="c-loading"></canvas></div>
+      <div><canvas id="c-dload"></canvas></div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">Branch P Losses (kW)
+      <span class="before-after-tag ba-before">● before</span>
+      <span class="before-after-tag ba-after">● after</span>
+    </div>
+    <div class="g2" style="margin-bottom:14px">
+      <div><canvas id="c-ploss"></canvas></div>
+      <div><canvas id="c-qloss"></canvas></div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">Voltage Stability Index per Branch
+      <span class="before-after-tag ba-before">● before</span>
+      <span class="before-after-tag ba-after">● after</span>
+    </div>
+    <div><canvas id="c-vsi"></canvas></div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">Network Topology — voltage heatmap
+      <span class="before-after-tag ba-after">● coloured by V_pu after</span>
+    </div>
+    <svg id="topo-svg" viewBox="0 0 560 310"></svg>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:#22c55e"></div>≥ 0.95 pu (normal)</div>
+      <div class="leg"><div class="leg-dot" style="background:#f59e0b"></div>0.90–0.95 pu (warning)</div>
+      <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>&lt; 0.90 pu (critical)</div>
+    </div>
+  </div>
+
+  <!-- ══ S2 ELECTRICAL DISTANCE ══ -->
+  <div class="card">
+    <div class="sec-head"><h2>S2 — Electrical Distance Analysis</h2><span>path impedance · feeder depth · correlation</span></div>
+
+    <div class="g2" style="margin-bottom:14px">
+      <div>
+        <div class="card-title">Cumulative |Z| from Substation (Ω)</div>
+        <canvas id="c-cumz"></canvas>
+      </div>
+      <div>
+        <div class="card-title">Feeder Depth (hops)</div>
+        <canvas id="c-depth"></canvas>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">|Z| vs V_pu Scatter
+      <span class="sub">higher impedance → lower voltage (r shown in title)</span>
+    </div>
+    <div style="margin-bottom:14px"><canvas id="c-zv"></canvas></div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">33×33 Electrical Distance Matrix
+      <span class="sub">heatmap — blue=near, red=far</span>
+    </div>
+    <div class="hm-wrap"><canvas id="c-edm" style="max-height:380px"></canvas></div>
+  </div>
+
+  <!-- ══ S3 DISTURBANCE PROPAGATION ══ -->
+  <div class="card">
+    <div class="sec-head"><h2>S3 — Active Power Disturbance Propagation</h2><span>influence matrix · BII · VFI</span></div>
+
+    <div class="g2" style="margin-bottom:14px">
+      <div>
+        <div class="card-title">Bus Influence Index (BII)
+          <span class="sub">how much bus i affects others (+20% ΔP)</span>
+        </div>
+        <canvas id="c-bii"></canvas>
+      </div>
+      <div>
+        <div class="card-title">Voltage Fragility Index (VFI)
+          <span class="sub">how much bus j is affected by all disturbances</span>
+        </div>
+        <canvas id="c-vfi"></canvas>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">Propagation Profiles — key buses perturbed +20%
+      <span class="sub">|ΔV| across all 33 buses</span>
+    </div>
+    <div style="margin-bottom:14px"><canvas id="c-propprofile"></canvas></div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">BII vs VFI Scatter
+      <span class="sub">influential (high BII) vs vulnerable (high VFI) — coloured by V_pu</span>
+    </div>
+    <div style="margin-bottom:14px"><canvas id="c-bii-vfi"></canvas></div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">33×33 Influence Matrix M20
+      <span class="sub">row=source bus, col=affected bus · +20% ΔP perturbation</span>
+    </div>
+    <div class="hm-wrap"><canvas id="c-M20" style="max-height:380px"></canvas></div>
+  </div>
+
+  <!-- ══ S4 REACTIVE SENSITIVITY ══ -->
+  <div class="card">
+    <div class="sec-head"><h2>S4 — Reactive Power Sensitivity (dV/dQ)</h2><span>weak bus identification</span></div>
+
+    <div class="g2" style="margin-bottom:14px">
+      <div>
+        <div class="card-title">Self-Sensitivity −dV_i/dQ_i (pu/kVAR)
+          <span class="sub">higher = weaker reactive support</span>
+        </div>
+        <canvas id="c-self"></canvas>
+      </div>
+      <div>
+        <div class="card-title">Column-Sum Exposure Σ|dV/dQ|
+          <span class="sub">total reactive vulnerability per bus</span>
+        </div>
+        <canvas id="c-colsum"></canvas>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">Top 15 Weakest Buses — ranked by self-sensitivity</div>
+    <div style="margin-bottom:14px"><canvas id="c-weakrank"></canvas></div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">33×33 dV/dQ Sensitivity Matrix
+      <span class="sub">heatmap — intensity = voltage impact per kVAR injected</span>
+    </div>
+    <div class="hm-wrap"><canvas id="c-dvdq" style="max-height:380px"></canvas></div>
+  </div>
+
+  <!-- ══ S5 ZONE VULNERABILITY ══ -->
+  <div class="card">
+    <div class="sec-head"><h2>S5 — Feeder Zone Vulnerability</h2><span>near-slack · mid-feeder · far-end comparison</span></div>
+
+    <div class="g2" style="margin-bottom:14px">
+      <div>
+        <div class="card-title">Zone Mean |ΔV| (%) Profile
+          <span class="sub">average propagation across all buses</span>
+        </div>
+        <canvas id="c-zonemean"></canvas>
+      </div>
+      <div>
+        <div class="card-title">Zone Peak Amplification
+          <span class="sub">worst-case |ΔV| per source bus, grouped by zone</span>
+        </div>
+        <canvas id="c-zonepeak"></canvas>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">Bus 18 Voltage Degradation vs Disturbance Location
+      <span class="sub">V@Bus18 as load increases on each main-feeder bus at 3 perturbation levels</span>
+    </div>
+    <div style="margin-bottom:14px"><canvas id="c-v18deg"></canvas></div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">|ΔV| Attenuation vs Electrical Distance
+      <span class="sub">disturbance decays with distance from source — 3 key source buses</span>
+    </div>
+    <div><canvas id="c-atten"></canvas></div>
+  </div>
+
+  <!-- ══ S6 INDICES ══ -->
+  <div class="card">
+    <div class="sec-head"><h2>S6 — Novel Electrical Indices</h2><span>BII · VFI · DPF · ECI · Instability</span></div>
+
+    <div class="g2" style="margin-bottom:14px">
+      <div>
+        <div class="card-title">ECI — Electrical Centrality Index
+          <span class="sub">closeness + inv(Z) + BII + VFI weighted</span>
+        </div>
+        <canvas id="c-eci"></canvas>
+      </div>
+      <div>
+        <div class="card-title">Instability Score
+          <span class="sub">norm(VFI + self_dVdQ + V_drop)</span>
+        </div>
+        <canvas id="c-instab"></canvas>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">DPF — Disturbance Propagation Factor
+      <span class="sub">off-diagonal reach ratio per bus</span>
+    </div>
+    <div style="margin-bottom:14px"><canvas id="c-dpf"></canvas></div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">Multi-Index Overlay — normalised
+      <span class="sub">BII · VFI · ECI · Instability on one scale</span>
+    </div>
+    <div style="margin-bottom:14px"><canvas id="c-multi"></canvas></div>
+
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">Top 10 Buses by ECI — comparison table</div>
+    <div id="s6-table" style="overflow-x:auto"></div>
+  </div>
+
+  <!-- ══ S9 COMPOSITE RISK ══ -->
+  <div class="card">
+    <div class="sec-head"><h2>S9 — Composite Risk &amp; Advanced Metrics</h2><span>risk · radar · impact · VSI</span></div>
+
+    <div class="g2" style="margin-bottom:14px">
+      <div>
+        <div class="card-title">Composite Risk Score per Bus
+          <span class="sub">norm(VFI + self_dVdQ + V_drop)</span>
+        </div>
+        <canvas id="c-risk"></canvas>
+      </div>
+      <div>
+        <div class="card-title">Mean |ΔV| (%) at 3 Perturbation Levels
+          <span class="sub">5% · 10% · 20% load increase</span>
+        </div>
+        <canvas id="c-impact"></canvas>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <div class="g2" style="margin-top:12px">
+      <div>
+        <div class="card-title">Top 5 Buses — Multi-Index Radar
+          <span class="sub">BII · VFI · DPF · ECI · Instability normalised</span>
+        </div>
+        <canvas id="c-radar"></canvas>
+      </div>
+      <div>
+        <div class="card-title">VSI per Branch — Voltage Stability Index</div>
+        <canvas id="c-vsi9"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ RAG EXPLAINABILITY ══ -->
+  <div class="card">
+    <div class="sec-head"><h2>🧠 RAG Explainability</h2><span>knowledge-grounded analysis of this scenario</span></div>
+    <div id="rag-panel">
+      <div style="color:var(--muted);font-size:13px">Run a scenario to see explanations.</div>
+    </div>
+  </div>
+
+  <!-- ══ S10 RESEARCH INSIGHTS ══ -->
+  <div class="card">
+    <div class="sec-head"><h2>S10 — Automated Research Insights</h2><span>correlations · rankings · system summary</span></div>
+    <div class="g4" id="s10-kpis" style="margin-bottom:14px"></div>
+    <hr class="divider">
+    <div class="card-title" style="margin-top:12px">Key Findings</div>
+    <div class="findings-grid" id="s10-findings"></div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+// ═══════════════════════════════════
+// GLOBALS
+// ═══════════════════════════════════
+const BUSES=Array.from({length:33},(_,i)=>i+1);
+const BLABS=Array.from({length:32},(_,i)=>`${i+1}-${i+2}`);
+let charts={};
+let TOPO=null;
+
+const COL={
+  before:'rgba(99,102,241,', after:'rgba(34,197,94,',
+  red:'rgba(239,68,68,',     amber:'rgba(245,158,11,',
+  blue:'rgba(59,130,246,',   teal:'rgba(20,184,166,',
+  pink:'rgba(236,72,153,',   purple:'rgba(168,85,247,',
+};
+const c=(n,a)=>COL[n]+a+')';
+const vCol=v=>v<0.90?'#ef4444':v<0.95?'#f59e0b':'#22c55e';
+const lCol=l=>l>100?'#ef4444':l>80?'#f59e0b':'#3b82f6';
+const norm=arr=>{const mn=Math.min(...arr),r=(Math.max(...arr)-mn)||1;return arr.map(v=>(v-mn)/r)};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// ── Status & stepper ──────────────────────────
+function setSt(msg,loading=false){
+  document.getElementById('stxt').textContent=msg;
+  document.getElementById('dot').className='dot'+(loading?' spin':'');
+}
+function fp(n){
+  for(let i=0;i<9;i++){
+    const el=document.getElementById('fp'+i);
+    el.classList.remove('act','done');
+    if(i<n)el.classList.add('done');
+    if(i===n)el.classList.add('act');
+  }
+}
+
+// ── Chart helpers ──────────────────────────────
+const CD={
+  plugins:{legend:{labels:{color:'#7c8399',font:{size:10},boxWidth:10,padding:6}}},
+  scales:{
+    x:{ticks:{color:'#7c8399',font:{size:8.5},maxRotation:45},
+       grid:{color:'rgba(255,255,255,0.04)'}},
+    y:{ticks:{color:'#7c8399',font:{size:9}},
+       grid:{color:'rgba(255,255,255,0.04)'}}
+  }
+};
+function mk(id,cfg){
+  if(charts[id]){charts[id].destroy();delete charts[id]}
+  const cv=document.getElementById(id);if(!cv)return;
+  charts[id]=new Chart(cv.getContext('2d'),cfg);
+}
+function title(t){return {display:true,text:t,color:'#7c8399',font:{size:10.5},padding:{bottom:6}}}
+
+// ── Heatmap pixel canvas ───────────────────────
+function heatmap(id,matrix,title_){
+  const canvas=document.getElementById(id);
+  if(!canvas||!matrix||!matrix.length)return;
+  const N=matrix.length;
+  const cs=Math.max(5,Math.min(12,Math.floor(340/N)));
+  const lp=24,tp=16;
+  canvas.width=lp+N*cs; canvas.height=tp+N*cs;
+  canvas.style.width='100%';canvas.style.height='auto';
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#1a1d27';ctx.fillRect(0,0,canvas.width,canvas.height);
+  let mx=0;matrix.forEach(row=>row.forEach(v=>{if(v>mx)mx=v}));
+  for(let i=0;i<N;i++)for(let j=0;j<N;j++){
+    const v=matrix[i][j]/(mx||1);
+    ctx.fillStyle=`rgb(${Math.round(239*v)},${Math.round(68+80*(1-v)*v*4)},${Math.round(68*(1-v))})`;
+    ctx.fillRect(lp+j*cs,tp+i*cs,cs-1,cs-1);
+  }
+  ctx.fillStyle='rgba(124,131,153,0.8)';ctx.font='7px sans-serif';
+  for(let i=0;i<N;i+=5){
+    ctx.fillText(i+1,lp+i*cs+cs/2-3,tp-3);
+    ctx.fillText(i+1,1,tp+i*cs+cs/2+3);
+  }
+}
+
+// ═══════════════════════════════════
+// SCENARIOS
+// ═══════════════════════════════════
+async function loadScenarios(){
+  const d=await fetch('/viz/scenarios').then(r=>r.json());
+  const list=document.getElementById('sc-list');
+  list.innerHTML='';
+  Object.entries(d).forEach(([key,sc])=>{
+    const btn=document.createElement('button');
+    btn.className='sc-btn';btn.dataset.key=key;
+    btn.innerHTML=`<span class="scl">${sc.label}</span><span class="scd">${sc.description}</span>`;
+    btn.onclick=()=>run(key,btn);
+    list.appendChild(btn);
+  });
+}
+
+// ═══════════════════════════════════
+// TOPOLOGY
+// ═══════════════════════════════════
+async function loadTopo(){
+  TOPO=await fetch('/viz/topology').then(r=>r.json());
+  drawTopo(null);
+}
+function drawTopo(vpu){
+  if(!TOPO)return;
+  const svg=document.getElementById('topo-svg');
+  const W=560,H=310,pad=28;
+  const xs=Object.values(TOPO.positions).map(p=>p[0]);
+  const ys=Object.values(TOPO.positions).map(p=>p[1]);
+  const [xmn,xmx]=[Math.min(...xs),Math.max(...xs)];
+  const [ymn,ymx]=[Math.min(...ys),Math.max(...ys)];
+  const px=b=>pad+(TOPO.positions[b][0]-xmn)/(xmx-xmn||1)*(W-2*pad);
+  const py=b=>pad+(TOPO.positions[b][1]-ymn)/(ymx-ymn||1)*(H-2*pad);
+  let h='';
+  TOPO.branches.forEach(br=>{
+    h+=`<line x1="${px(br.from)}" y1="${py(br.from)}" x2="${px(br.to)}" y2="${py(br.to)}" stroke="rgba(255,255,255,0.13)" stroke-width="1.3"/>`;
+  });
+  TOPO.buses.forEach(b=>{
+    const x=px(b),y=py(b),v=vpu?vpu[b-1]:1.0;
+    const col=vpu?vCol(v):'#6366f1';
+    const r=b===1?9:5;
+    h+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${col}" stroke="rgba(0,0,0,.5)" stroke-width=".8"/>`;
+    if(b===1||b%5===0||[18,22,25,33].includes(b))
+      h+=`<text x="${x}" y="${y-8}" fill="rgba(255,255,255,.75)" font-size="8.5" text-anchor="middle" font-weight="600">${b}</text>`;
+  });
+  svg.innerHTML=h;
+}
+
+// ═══════════════════════════════════
+// MAIN RUN
+// ═══════════════════════════════════
+async function run(key,btn){
+  document.querySelectorAll('.sc-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  setSt('Fetching all sections…',true);
+  fp(0);
+
+  const hdr={'Content-Type':'application/json'};
+  const empty='{}';
+
+  fp(1);
+  // Fetch all sections in parallel
+  const [rViz,rS2,rS3,rS4,rS5,rS6,rS9,rS10]=await Promise.all([
+    fetch('/viz/run',{method:'POST',headers:hdr,body:JSON.stringify({scenario_key:key})}).then(r=>r.json()),
+    fetch('/viz/s2',{method:'POST',headers:hdr,body:empty}).then(r=>r.json()),
+    fetch('/viz/s3',{method:'POST',headers:hdr,body:'{"perturb_pct":[0.05,0.10,0.20]}'}).then(r=>r.json()),
+    fetch('/viz/s4',{method:'POST',headers:hdr,body:'{"delta_q_kvar":50}'}).then(r=>r.json()),
+    fetch('/viz/s5',{method:'POST',headers:hdr,body:'{"perturb_pct":0.20}'}).then(r=>r.json()),
+    fetch('/viz/s6',{method:'POST',headers:hdr,body:empty}).then(r=>r.json()),
+    fetch('/viz/s9',{method:'POST',headers:hdr,body:empty}).then(r=>r.json()),
+    fetch('/viz/s10',{method:'POST',headers:hdr,body:empty}).then(r=>r.json()),
+  ]);
+
+  // Scroll to top
+  document.getElementById('main').scrollTo({top:0,behavior:'smooth'});
+
+  fp(2);await sleep(60); renderKPIs(rViz);
+  renderS1(rViz);
+  fp(3);await sleep(60); renderS2(rS2);
+  fp(4);await sleep(60); renderS3(rS3,rViz);
+  renderS4(rS4);
+  fp(5);await sleep(60); renderS5(rS5);
+  fp(6);await sleep(60); renderS6(rS6);
+  fp(7);await sleep(60); renderS9(rS9,rViz);
+  renderRAG(rViz.explanations,rViz,rS3,rS4,rS6);
+  fp(8);await sleep(60); renderS10(rS10);
+  drawTopo(rViz.after?.V_pu);
+
+  setSt(`${rViz.label||key} · scroll down to see all sections`);
+}
+
+// ═══════════════════════════════════
+// KPIs
+// ═══════════════════════════════════
+function renderKPIs(d){
+  if(!d||d.error)return;
+  const b=d.before,a=d.after,dv=d.delta;
+  const set=(id,val,bval,delta,pg,unit)=>{
+    document.getElementById(id).textContent=val;
+    document.getElementById(id+'-b').textContent='before: '+bval;
+    const el=document.getElementById(id+'-d');
+    const good=pg?delta>0:delta<0;
+    el.className='kd '+(delta===0?'dz':good?'dp':'dn');
+    el.textContent=(delta>=0?'+':'')+delta.toFixed(unit===''?0:2)+unit;
+  };
+  set('k-mv',a.min_V.toFixed(4)+' pu',b.min_V.toFixed(4)+' pu',dv.d_min_V,true,'pu');
+  set('k-bv',a.buses_below_095,b.buses_below_095,dv.d_buses_below,false,'');
+  set('k-pl',a.totPl.toFixed(1)+' kW',b.totPl.toFixed(1)+' kW',dv.d_totPl,false,' kW');
+  set('k-ql',a.totQl.toFixed(1)+' kVAR',b.totQl.toFixed(1)+' kVAR',dv.d_totQl,false,' kVAR');
+  set('k-ml',a.max_loading.toFixed(1)+'%',b.max_loading.toFixed(1)+'%',dv.d_max_loading,false,'%');
+}
+
+// ═══════════════════════════════════
+// S1 POWER FLOW
+// ═══════════════════════════════════
+function renderS1(d){
+  if(!d||d.error)return;
+  const b=d.before,a=d.after,dv=d.delta;
+  const buses=BUSES.map(i=>'B'+i);
+  const bl=a.branch_labels||BLABS;
+
+  // Voltage profile before+after
+  mk('c-vprofile',{type:'line',data:{labels:buses,datasets:[
+    {label:'Before',data:b.V_pu,borderColor:'#6366f1',borderWidth:1.5,pointRadius:2,tension:.3,fill:false},
+    {label:'After', data:a.V_pu,borderColor:'#22c55e',borderWidth:2,  pointRadius:2,tension:.3,fill:false,
+     pointBackgroundColor:a.V_pu.map(v=>vCol(v))},
+  ]},options:{...CD,plugins:{...CD.plugins,title:title('Voltage Profile (pu)')},
+    scales:{...CD.scales,y:{...CD.scales.y,min:0.84,suggestedMax:1.02}}}});
+
+  // ΔV per bus
+  mk('c-dv',{type:'bar',data:{labels:buses,datasets:[{
+    label:'ΔV (pu)',data:dv.dV,borderWidth:0,
+    backgroundColor:dv.dV.map(v=>v>=0?c('after','.75'):c('red','.75'))
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('ΔV per Bus (scenario − base pu)')}}});
+
+  // Branch loading before+after
+  mk('c-loading',{type:'bar',data:{labels:bl,datasets:[
+    {label:'Before',data:b.loading,backgroundColor:c('before','.4'),borderWidth:0},
+    {label:'After', data:a.loading,backgroundColor:a.loading.map(l=>lCol(l)+'aa'),borderWidth:0},
+  ]},options:{...CD,plugins:{...CD.plugins,title:title('Branch Loading % (before vs after)')},
+    scales:{...CD.scales,y:{...CD.scales.y,max:110}}}});
+
+  // Δ loading
+  mk('c-dload',{type:'bar',data:{labels:bl,datasets:[{
+    label:'Δ Loading %',data:dv.dLoad,borderWidth:0,
+    backgroundColor:dv.dLoad.map(v=>v>=0?c('red','.7'):c('after','.7'))
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Δ Branch Loading % (scenario − base)')}}});
+
+  // P losses before+after
+  mk('c-ploss',{type:'bar',data:{labels:bl,datasets:[
+    {label:'P loss before (kW)',data:b.Pl,backgroundColor:c('before','.5'),borderWidth:0},
+    {label:'P loss after (kW)', data:a.Pl,backgroundColor:c('after','.6'),borderWidth:0},
+  ]},options:{...CD,plugins:{...CD.plugins,title:title('Branch P Losses kW (before vs after)')}}});
+
+  // Q losses before+after
+  mk('c-qloss',{type:'bar',data:{labels:bl,datasets:[
+    {label:'Q loss before (kVAR)',data:b.Ql,backgroundColor:c('purple','.4'),borderWidth:0},
+    {label:'Q loss after (kVAR)', data:a.Ql,backgroundColor:c('teal','.5'),borderWidth:0},
+  ]},options:{...CD,plugins:{...CD.plugins,title:title('Branch Q Losses kVAR (before vs after)')}}});
+
+  // VSI before+after
+  mk('c-vsi',{type:'bar',data:{labels:bl,datasets:[
+    {label:'VSI before',data:b.VSI,backgroundColor:c('before','.4'),borderWidth:0},
+    {label:'VSI after', data:a.VSI,backgroundColor:c('red','.55'),borderWidth:0},
+  ]},options:{...CD,plugins:{...CD.plugins,title:title('Voltage Stability Index per Branch (before vs after)')}}});
+}
+
+// ═══════════════════════════════════
+// S2 ELECTRICAL DISTANCE
+// ═══════════════════════════════════
+function renderS2(d){
+  if(!d||d.error)return;
+  const buses=BUSES.map(i=>'B'+i);
+  const cumZ=d.cumulative_Z_ohm,dep=d.feeder_depth_hops,V=d.V_pu;
+
+  mk('c-cumz',{type:'bar',data:{labels:buses,datasets:[{
+    label:'Path |Z| (Ω)',data:cumZ,borderWidth:0,
+    backgroundColor:cumZ.map(v=>{const n=v/Math.max(...cumZ);return `rgba(59,130,246,${.25+.75*n})`})
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Cumulative Path Impedance |Z| from Bus 1 (Ω)')}}});
+
+  mk('c-depth',{type:'bar',data:{labels:buses,datasets:[{
+    label:'Hops',data:dep,borderWidth:0,backgroundColor:c('teal','.55')
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Feeder Depth (hops from substation)')}}});
+
+  mk('c-zv',{type:'scatter',data:{datasets:[{
+    label:'Bus (|Z|, V_pu)',
+    data:cumZ.map((z,i)=>({x:z,y:V[i]})),
+    backgroundColor:V.map(v=>vCol(v)+'bb'),pointRadius:5,
+  }]},options:{...CD,plugins:{...CD.plugins,title:title(`Cumulative |Z| vs V_pu  (r = ${d.summary?.r_Z_Vpu ?? '—'})`)},
+    scales:{...CD.scales,
+      x:{...CD.scales.x,title:{display:true,text:'|Z| (Ω)',color:'#7c8399'}},
+      y:{...CD.scales.y,title:{display:true,text:'V_pu',color:'#7c8399'},min:0.84}}}});
+
+  heatmap('c-edm',d.elec_dist_matrix,'Electrical Distance Matrix');
+}
+
+// ═══════════════════════════════════
+// S3 PROPAGATION
+// ═══════════════════════════════════
+function renderS3(d,viz){
+  if(!d||d.error)return;
+  const buses=BUSES.map(i=>'B'+i);
+  const Vafter=viz?.after?.V_pu||[];
+
+  mk('c-bii',{type:'bar',data:{labels:buses,datasets:[{
+    label:'BII',data:d.BII,borderWidth:0,
+    backgroundColor:d.BII.map(v=>{const n=v/Math.max(...d.BII);return `rgba(239,68,68,${.2+.8*n})`})
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Bus Influence Index (BII) — row sum M20')}}});
+
+  mk('c-vfi',{type:'bar',data:{labels:buses,datasets:[{
+    label:'VFI',data:d.VFI,borderWidth:0,
+    backgroundColor:d.VFI.map(v=>{const n=v/Math.max(...d.VFI);return `rgba(245,158,11,${.2+.8*n})`})
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Voltage Fragility Index (VFI) — col sum M20')}}});
+
+  const prof=d.propagation_profiles_20pct||{};
+  const pcols=['#6366f1','#22c55e','#ef4444','#f59e0b','#14b8a6'];
+  mk('c-propprofile',{type:'line',data:{labels:buses,datasets:Object.entries(prof).map(([k,v],i)=>({
+    label:k.replace('bus_','Bus '),data:v.map(x=>x*100),
+    borderColor:pcols[i%5],borderWidth:1.8,pointRadius:1.5,tension:.3,fill:false
+  }))},options:{...CD,plugins:{...CD.plugins,title:title('|ΔV| (%) across all buses — key source buses perturbed +20%')}}});
+
+  mk('c-bii-vfi',{type:'scatter',data:{datasets:[{
+    label:'Buses',
+    data:d.BII.map((b,i)=>({x:b,y:d.VFI[i]})),
+    backgroundColor:d.BII.map((_,i)=>vCol(Vafter[i]||1)+'bb'),pointRadius:5,
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('BII vs VFI (coloured by V_pu after scenario)')},
+    scales:{...CD.scales,x:{...CD.scales.x,title:{display:true,text:'BII',color:'#7c8399'}},
+      y:{...CD.scales.y,title:{display:true,text:'VFI',color:'#7c8399'}}}}});
+
+  const M20=d.influence_matrices?.['0.2'];
+  if(M20)heatmap('c-M20',M20,'Influence Matrix M20');
+}
+
+// ═══════════════════════════════════
+// S4 REACTIVE SENSITIVITY
+// ═══════════════════════════════════
+function renderS4(d){
+  if(!d||d.error)return;
+  const buses=BUSES.map(i=>'B'+i);
+  const ss=d.self_sensitivity,cs=d.col_sum_sensitivity;
+
+  mk('c-self',{type:'bar',data:{labels:buses,datasets:[{
+    label:'-dV/dQ (pu/kVAR)',data:ss,borderWidth:0,
+    backgroundColor:ss.map(v=>{const n=v/Math.max(...ss);return `rgba(168,85,247,${.2+.8*n})`})
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Self-Sensitivity −dV_i/dQ_i (pu/kVAR)')}}});
+
+  mk('c-colsum',{type:'bar',data:{labels:buses,datasets:[{
+    label:'Σ|dV/dQ|',data:cs,borderWidth:0,
+    backgroundColor:cs.map(v=>{const n=v/Math.max(...cs);return `rgba(236,72,153,${.2+.8*n})`})
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Column-Sum Sensitivity Σ|dV_j/dQ_i| per bus')}}});
+
+  const wr=d.weak_bus_ranking;
+  if(wr){
+    mk('c-weakrank',{type:'bar',data:{
+      labels:wr.bus_numbers.map(b=>'Bus '+b),
+      datasets:[{label:'Self-sensitivity',data:wr.self_sens_values,borderWidth:0,backgroundColor:c('purple','.7')}]
+    },options:{...CD,plugins:{...CD.plugins,title:title('Top 15 Weakest Buses by Reactive Self-Sensitivity')}}});
+  }
+  if(d.dVdQ_matrix)heatmap('c-dvdq',d.dVdQ_matrix,'dV/dQ Matrix');
+}
+
+// ═══════════════════════════════════
+// S5 ZONE VULNERABILITY
+// ═══════════════════════════════════
+function renderS5(d){
+  if(!d||d.error)return;
+  const buses=BUSES.map(i=>'B'+i);
+  const zcol={near_slack:'#6366f1',mid_feeder:'#f59e0b',far_end:'#ef4444'};
+  const zm=d.zone_mean_dV_pct||{};
+
+  mk('c-zonemean',{type:'line',data:{labels:buses,datasets:Object.entries(zm).map(([z,vals])=>({
+    label:z.replace('_',' '),data:vals,borderColor:zcol[z]||'#fff',
+    borderWidth:2,pointRadius:1.5,tension:.3,fill:false
+  }))},options:{...CD,plugins:{...CD.plugins,title:title('Mean |ΔV| (%) propagation profile per zone')}}});
+
+  const zp=d.zone_peak_amplification||{};
+  const allB=[],allV=[],allC=[];
+  Object.entries(zp).forEach(([z,bmap])=>Object.entries(bmap).forEach(([b,v])=>{
+    allB.push('B'+b);allV.push(v);allC.push(zcol[z]||'#fff');
+  }));
+  mk('c-zonepeak',{type:'bar',data:{labels:allB,datasets:[{
+    label:'Peak |ΔV| (%)',data:allV,borderWidth:0,backgroundColor:allC
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Peak |ΔV| (%) per source bus — coloured by zone')}}});
+
+  const v18=d.v18_degradation_by_pct||{};
+  const mfb=d.main_feeder_buses||[];
+  mk('c-v18deg',{type:'line',data:{labels:mfb.map(b=>'B'+b),datasets:Object.entries(v18).map(([pct,vals],i)=>({
+    label:`+${Math.round(pct*100)}%`,data:vals,
+    borderColor:[c('after','1'),c('amber','1'),c('red','1')][i]||'#fff',
+    borderWidth:1.8,pointRadius:2,tension:.3,fill:false
+  }))},options:{...CD,plugins:{...CD.plugins,title:title('V@Bus18 as disturbance location varies — 3 perturbation levels')},
+    scales:{...CD.scales,y:{...CD.scales.y,min:0.84}}}});
+
+  const att=d.attenuation_vs_distance||{};
+  mk('c-atten',{type:'scatter',data:{datasets:Object.entries(att).map(([k,v],i)=>({
+    label:k.replace('_',' '),
+    data:v.cumZ.map((z,j)=>({x:z,y:v.dV_pct[j]*100})),
+    backgroundColor:[c('after','.7'),c('amber','.7'),c('red','.7')][i]||c('blue','.7'),pointRadius:3,
+  }))},options:{...CD,plugins:{...CD.plugins,title:title('|ΔV| (%) vs Electrical Distance Ω — 3 source buses')},
+    scales:{...CD.scales,x:{...CD.scales.x,title:{display:true,text:'Cumulative |Z| (Ω)',color:'#7c8399'}},
+      y:{...CD.scales.y,title:{display:true,text:'|ΔV| (%)',color:'#7c8399'}}}}});
+}
+
+// ═══════════════════════════════════
+// S6 INDICES
+// ═══════════════════════════════════
+function renderS6(d){
+  if(!d||d.error)return;
+  const buses=BUSES.map(i=>'B'+i);
+
+  mk('c-eci',{type:'bar',data:{labels:buses,datasets:[{
+    label:'ECI',data:d.ECI,borderWidth:0,
+    backgroundColor:d.ECI.map(v=>{const n=v/Math.max(...d.ECI);return `rgba(99,102,241,${.2+.8*n})`})
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Electrical Centrality Index (ECI)')}}});
+
+  mk('c-instab',{type:'bar',data:{labels:buses,datasets:[{
+    label:'Instability',data:d.instability,borderWidth:0,
+    backgroundColor:d.instability.map(v=>`rgba(239,68,68,${.15+.85*v})`)
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Instability Score — norm(VFI + self_dVdQ + V_drop)')}}});
+
+  const DPFclean=d.DPF.map(v=>isFinite(v)?Math.min(v,500):0);
+  mk('c-dpf',{type:'bar',data:{labels:buses,datasets:[{
+    label:'DPF',data:DPFclean,borderWidth:0,
+    backgroundColor:DPFclean.map(v=>{const n=v/Math.max(...DPFclean)||0;return `rgba(20,184,166,${.2+.8*n})`})
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Disturbance Propagation Factor (DPF)')}}});
+
+  mk('c-multi',{type:'line',data:{labels:buses,datasets:[
+    {label:'BII (norm)',data:norm(d.BII),borderColor:'#ef4444',borderWidth:1.5,pointRadius:1,tension:.3,fill:false},
+    {label:'VFI (norm)',data:norm(d.VFI),borderColor:'#f59e0b',borderWidth:1.5,pointRadius:1,tension:.3,fill:false},
+    {label:'ECI (norm)',data:norm(d.ECI),borderColor:'#6366f1',borderWidth:2,  pointRadius:1,tension:.3,fill:false},
+    {label:'Instability',data:d.instability,borderColor:'#ec4899',borderWidth:1.5,pointRadius:1,tension:.3,fill:false},
+  ]},options:{...CD,plugins:{...CD.plugins,title:title('Normalised Multi-Index Overlay — BII · VFI · ECI · Instability')},
+    scales:{...CD.scales,y:{...CD.scales.y,min:0,max:1}}}});
+
+  const t=d.top10_by_ECI;
+  if(t){
+    const maxBII=Math.max(...t.BII),maxVFI=Math.max(...t.VFI);
+    document.getElementById('s6-table').innerHTML=`
+      <table class="tbl"><thead><tr>
+        <th>Bus</th><th>ECI</th><th>BII</th><th>VFI</th><th>Instability</th><th>V_pu</th>
+      </tr></thead><tbody>
+      ${t.bus_numbers.map((b,i)=>`<tr>
+        <td><b>Bus ${b}</b></td>
+        <td>${t.ECI[i].toFixed(4)}</td>
+        <td><span class="ibar" style="width:${t.BII[i]/maxBII*60}px;background:#ef4444;display:inline-block;height:5px;border-radius:2px;vertical-align:middle"></span> ${t.BII[i].toFixed(4)}</td>
+        <td><span class="ibar" style="width:${t.VFI[i]/maxVFI*60}px;background:#f59e0b;display:inline-block;height:5px;border-radius:2px;vertical-align:middle"></span> ${t.VFI[i].toFixed(4)}</td>
+        <td><span class="ibar" style="width:${t.instability[i]*60}px;background:#ec4899;display:inline-block;height:5px;border-radius:2px;vertical-align:middle"></span> ${t.instability[i].toFixed(3)}</td>
+        <td style="color:${vCol(t.V_pu[i])};font-weight:600">${t.V_pu[i].toFixed(4)}</td>
+      </tr>`).join('')}
+      </tbody></table>`;
+  }
+}
+
+// ═══════════════════════════════════
+// S9 COMPOSITE
+// ═══════════════════════════════════
+function renderS9(d,viz){
+  if(!d||d.error)return;
+  const buses=BUSES.map(i=>'B'+i);
+  const bl=viz?.after?.branch_labels||BLABS;
+
+  mk('c-risk',{type:'bar',data:{labels:buses,datasets:[{
+    label:'Risk',data:d.composite_risk_score,borderWidth:0,
+    backgroundColor:d.composite_risk_score.map(v=>`rgba(239,68,68,${.15+.85*v})`)
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Composite Risk Score per Bus (normalised 0–1)')}}});
+
+  const imp=d.mean_voltage_impact_pct||{};
+  mk('c-impact',{type:'line',data:{labels:buses,datasets:Object.entries(imp).map(([pct,vals],i)=>({
+    label:`+${Math.round(pct*100)}% perturb`,data:vals,
+    borderColor:[c('after','1'),c('amber','1'),c('red','1')][i]||'#fff',
+    borderWidth:1.8,pointRadius:1.5,tension:.3,fill:false
+  }))},options:{...CD,plugins:{...CD.plugins,title:title('Mean |ΔV| (%) at 3 perturbation levels across all buses')}}});
+
+  const t5=d.top5_multi_index_profile;
+  if(t5){
+    const rcols=['#6366f1','#22c55e','#ef4444','#f59e0b','#14b8a6'];
+    mk('c-radar',{type:'radar',data:{labels:t5.metric_labels,datasets:Object.entries(t5.profiles).map(([bus,vals],i)=>({
+      label:bus.replace('_',' '),data:vals,
+      borderColor:rcols[i%5],backgroundColor:rcols[i%5].replace(')',',0.08)'),
+      borderWidth:2,pointRadius:3,
+    }))},options:{plugins:{legend:{labels:{color:'#7c8399',font:{size:10}}}},
+      scales:{r:{ticks:{color:'#7c8399',font:{size:8},backdropColor:'transparent'},
+        grid:{color:'rgba(255,255,255,0.07)'},pointLabels:{color:'#7c8399',font:{size:10}},min:0,max:1}}}});
+  }
+
+  mk('c-vsi9',{type:'bar',data:{labels:bl,datasets:[{
+    label:'VSI',data:d.VSI_per_branch,borderWidth:0,
+    backgroundColor:d.VSI_per_branch.map(v=>{const n=Math.min(v/Math.max(...d.VSI_per_branch),1);return `rgba(168,85,247,${.2+.8*n})`})
+  }]},options:{...CD,plugins:{...CD.plugins,title:title('Voltage Stability Index per Branch')}}});
+}
+
+// ═══════════════════════════════════
+// RAG — enriched with more components
+// ═══════════════════════════════════
+function renderRAG(entries,viz,s3,s4,s6){
+  const panel=document.getElementById('rag-panel');
+  const cards=[];
+
+  // From API explanations
+  if(entries&&entries.length){
+    entries.forEach(e=>{
+      cards.push(`<div class="rag-card r${e.severity[0]}">
+        <div class="rt">⚠ ${e.title}</div>
+        <div class="rx">${e.explanation}</div>
+        <div class="rc">📍 In this scenario: ${e.context||''}</div>
+        <div class="rr">💡 ${e.recommendation}</div>
+      </div>`);
+    });
+  }
+
+  // Extra RAG: worst BII bus interpretation
+  if(s3&&!s3.error&&s3.summary){
+    const bus=s3.summary.most_influential_bus_BII;
+    const bii=(s3.BII[bus-1]||0).toFixed(4);
+    cards.push(`<div class="rag-card rl">
+      <div class="rt">📡 Disturbance Source — Bus ${bus}</div>
+      <div class="rx">Bus ${bus} has the highest Bus Influence Index (BII = ${bii}), meaning a +20% load increase there propagates the most voltage deviation across the network. In radial feeders, buses near branching junctions typically have high BII.</div>
+      <div class="rc">📍 Top 5 influential buses: ${s3.summary.top5_BII_buses.map(b=>'Bus '+b).join(', ')}</div>
+      <div class="rr">💡 Install load forecasting sensors or DG units at Bus ${bus} to dampen disturbance propagation.</div>
+    </div>`);
+  }
+
+  // Extra RAG: most fragile bus VFI
+  if(s3&&!s3.error&&s3.summary){
+    const bus=s3.summary.most_fragile_bus_VFI;
+    const vfi=(s3.VFI[bus-1]||0).toFixed(4);
+    cards.push(`<div class="rag-card rm">
+      <div class="rt">🔴 Most Fragile Bus — Bus ${bus}</div>
+      <div class="rx">Bus ${bus} has the highest Voltage Fragility Index (VFI = ${vfi}), meaning it receives the most voltage perturbation from disturbances anywhere in the network. Feeder-end buses are typically most fragile due to accumulated impedance.</div>
+      <div class="rc">📍 Top 5 fragile buses: ${s3.summary.top5_VFI_buses.map(b=>'Bus '+b).join(', ')}</div>
+      <div class="rr">💡 Deploy a capacitor bank or voltage regulator near Bus ${bus} to stiffen the bus voltage against incoming disturbances.</div>
+    </div>`);
+  }
+
+  // Extra RAG: weakest reactive bus
+  if(s4&&!s4.error&&s4.summary){
+    const bus=s4.summary.most_sensitive_bus;
+    const ss=s4.summary.max_self_sens_pu_per_kvar;
+    cards.push(`<div class="rag-card rh">
+      <div class="rt">⚡ Reactive Weak Point — Bus ${bus}</div>
+      <div class="rx">Bus ${bus} has the highest reactive self-sensitivity (−dV/dQ = ${ss} pu/kVAR). This means every kVAR of reactive load added at Bus ${bus} drops its voltage by ${ss} pu — far more than any other bus. This indicates very weak reactive power support at this location.</div>
+      <div class="rc">📍 Top 5 reactive-weak buses: ${s4.summary.top5_weak_buses.map(b=>'Bus '+b).join(', ')}</div>
+      <div class="rr">💡 A shunt capacitor bank of 300–600 kVAR at Bus ${bus} would dramatically improve voltage stability at this node. Consider also a static VAR compensator (SVC) for dynamic loads.</div>
+    </div>`);
+  }
+
+  // Extra RAG: highest ECI bus
+  if(s6&&!s6.error&&s6.summary){
+    const top=s6.summary.top5_ECI;
+    const topInstab=s6.summary.top5_instability;
+    cards.push(`<div class="rag-card rm">
+      <div class="rt">🏆 Highest Electrical Centrality — Bus ${top[0]}</div>
+      <div class="rx">Bus ${top[0]} scores highest on the Electrical Centrality Index (ECI), combining closeness centrality, inverse electrical distance, BII, and VFI. This bus plays a central role in both the graph topology and the electrical power transfer of the network.</div>
+      <div class="rc">📍 Top 5 ECI buses: ${top.map(b=>'Bus '+b).join(', ')} · Top instability: ${topInstab.map(b=>'Bus '+b).join(', ')}</div>
+      <div class="rr">💡 Bus ${top[0]} should be prioritised for protection upgrades, smart sensor deployment, and as a candidate for tie-switch connection points in network reconfiguration.</div>
+    </div>`);
+  }
+
+  // Extra RAG: loss analysis
+  if(viz&&viz.after){
+    const pct=(viz.after.totPl/3655*100).toFixed(1);
+    const d=viz.delta?.d_totPl||0;
+    cards.push(`<div class="rag-card rl">
+      <div class="rt">📊 System Loss Analysis</div>
+      <div class="rx">Total real power losses are ${viz.after.totPl.toFixed(1)} kW (${pct}% of the 3655 kW base load). The IEEE 33-bus system has a base loss of ~245 kW (6.7%). Loss change from base: ${d>=0?'+':''}${d.toFixed(1)} kW.</div>
+      <div class="rc">📍 Losses are dominated by high-resistance branches (br 7-8, 8-9, 12-13) carrying heavy current.</div>
+      <div class="rr">💡 Feeder reconfiguration by closing tie switches can reduce I²R losses by 10–30%. The classical optimal reconfiguration of IEEE 33-bus reduces losses to ~139 kW by closing ties 7-20, 8-14, 11-21, 17-32, 24-28.</div>
+    </div>`);
+  }
+
+  if(cards.length===0){
+    panel.innerHTML='<div style="color:var(--muted)">No explanations available.</div>';
+    return;
+  }
+  panel.innerHTML=`<div class="rag-grid">${cards.join('')}</div>`;
+}
+
+// ═══════════════════════════════════
+// S10 INSIGHTS
+// ═══════════════════════════════════
+function renderS10(d){
+  if(!d||d.error)return;
+  const f=d.findings;
+  const fmt=arr=>arr.map(b=>`Bus ${b}`).join(', ');
+  const s=f['10_system_summary'];
+
+  document.getElementById('s10-kpis').innerHTML=`
+    <div class="kpi"><div class="kl">P Loss</div><div class="kv">${s.P_loss_kw} kW</div><div class="ks">${s.P_loss_pct}% of total load</div></div>
+    <div class="kpi"><div class="kl">Min Voltage</div><div class="kv" style="color:${vCol(s.min_V_pu)}">${s.min_V_pu}</div><div class="ks">Bus ${s.min_V_bus}</div></div>
+    <div class="kpi"><div class="kl">Buses &lt; 0.95</div><div class="kv" style="color:${s.buses_below_095>0?'var(--red)':'var(--green)'}">${s.buses_below_095}</div><div class="ks">${s.buses_below_090} below 0.90 pu</div></div>
+    <div class="kpi"><div class="kl">Max Loading</div><div class="kv" style="color:${lCol(s.max_loading_pct)}">${s.max_loading_pct}%</div><div class="ks">worst branch</div></div>`;
+
+  document.getElementById('s10-findings').innerHTML=[
+    {k:'Weakest buses (V_pu)',v:fmt(f['1_weakest_buses'])},
+    {k:'Most influential (BII)',v:fmt(f['2_most_influential_BII'])},
+    {k:'Most reactive-sensitive',v:fmt(f['3_most_reactive_sensitive'])},
+    {k:'Highest ECI',v:fmt(f['4_highest_ECI'])},
+    {k:'Fiedler λ₂ (algebraic connectivity)',v:`${f['5_fiedler_lambda2']} — ${f['5_topology_fragility']}`},
+    {k:'r(|Z|, V_pu)',v:f['6_r_Z_Vpu']},
+    {k:'r(|Z|, BII)',v:f['6_r_Z_BII']},
+    {k:'r(betweenness, ECI)',v:f['7_r_betweenness_ECI']},
+    {k:'Worst VSI branches',v:f['8_worst_VSI_branches']?.join(', ')},
+    {k:'Feeder-end buses',v:Object.entries(f['9_feeder_end_buses']||{}).map(([b,v])=>`Bus ${b}: ${v.V_pu} pu`).join(' · ')},
+  ].map(({k,v})=>`<div class="finding"><div class="fk">${k}</div><div class="fv">${v}</div></div>`).join('');
+}
+
+// ═══════════════════════════════════
+// INIT
+// ═══════════════════════════════════
+(async()=>{
+  await Promise.all([loadScenarios(),loadTopo()]);
+  // auto-run base
+  const first=document.querySelector('.sc-btn');
+  if(first)first.click();
+})();
+</script>
+</body>
+</html>
