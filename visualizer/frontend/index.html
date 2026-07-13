@@ -1,575 +1,599 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IEEE 33-Bus DNR Analyzer</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DNR Copilot — Agentic Distribution Network Analyzer</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --bg:#0f1117;--bg2:#1a1d27;--bg3:#22263a;--border:rgba(255,255,255,0.07);
   --text:#e2e8f0;--muted:#7c8399;--accent:#6366f1;
-  --green:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
-  --teal:#14b8a6;--purple:#a855f7;--pink:#ec4899;
+  --green:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;--teal:#14b8a6;
+  --purple:#a855f7;--pink:#ec4899;
   font-family:'Segoe UI',system-ui,sans-serif;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+.shell{display:grid;grid-template-columns:270px 1fr;height:100vh}
 
-/* ── Shell ── */
-.shell{display:grid;grid-template-columns:240px 1fr;height:100vh}
-
-/* ── Sidebar ── */
+/* SIDEBAR */
 .sidebar{background:var(--bg2);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;overflow:hidden}
-.sidebar-head{padding:14px 14px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
-.sidebar-head h1{font-size:14px;font-weight:700;color:#fff;margin-bottom:2px}
-.sidebar-head p{font-size:10px;color:var(--muted);line-height:1.4}
-.sidebar-scroll{overflow-y:auto;flex:1;padding:10px 8px 16px}
-.slabel{font-size:9.5px;font-weight:700;letter-spacing:.09em;color:var(--muted);
-  text-transform:uppercase;padding:8px 6px 3px}
-.sc-btn{width:100%;text-align:left;background:transparent;border:1px solid transparent;
-  border-radius:7px;padding:7px 9px;cursor:pointer;color:var(--text);
-  font-size:11.5px;line-height:1.4;transition:all .15s;margin-bottom:2px}
-.sc-btn:hover{background:var(--bg3);border-color:var(--border)}
-.sc-btn.active{background:rgba(99,102,241,.18);border-color:var(--accent);color:#fff}
-.sc-btn .scl{font-weight:600;display:block;margin-bottom:1px}
-.sc-btn .scd{font-size:10px;color:var(--muted);display:block;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.status-bar{padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;
-  display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+  display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.sb-head{padding:12px 14px 8px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sb-head h1{font-size:13.5px;font-weight:700;color:#fff}
+.sb-head p{font-size:9.5px;color:var(--muted);margin-top:1px;line-height:1.4}
+
+/* Memory tabs */
+.mem-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.mem-tab{flex:1;padding:7px 4px;font-size:10px;font-weight:600;text-align:center;
+  cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
+.mem-tab.on{color:var(--accent);border-color:var(--accent)}
+
+/* Memory panels */
+.mem-panel{flex:1;overflow-y:auto;padding:8px;display:none}
+.mem-panel.on{display:block}
+
+/* Query history items */
+.slabel{font-size:9px;font-weight:700;letter-spacing:.09em;color:var(--muted);
+  text-transform:uppercase;padding:5px 4px 2px;display:flex;justify-content:space-between;align-items:center}
+.slabel button{font-size:9px;color:var(--accent);background:none;border:none;cursor:pointer}
+.mem-item{border:1px solid var(--border);border-radius:7px;padding:7px 9px;
+  margin-bottom:4px;cursor:pointer;transition:all .15s;position:relative}
+.mem-item:hover{background:var(--bg3)}
+.mem-item.sel{border-color:var(--accent);background:rgba(99,102,241,.1)}
+.mem-item.cmp-a{border-color:var(--green);background:rgba(34,197,94,.06)}
+.mem-item.cmp-b{border-color:var(--amber);background:rgba(245,158,11,.06)}
+.mem-label{font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:18px}
+.mem-meta{font-size:10px;color:var(--muted)}
+.mem-chk{position:absolute;top:7px;right:7px;width:14px;height:14px;
+  border-radius:3px;border:1px solid var(--border);background:var(--bg3);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:8px;font-weight:700}
+.mem-chk.ca{background:var(--green);border-color:var(--green);color:#000}
+.mem-chk.cb{background:var(--amber);border-color:var(--amber);color:#000}
+
+/* Memory store visualizer */
+.store-section{margin-bottom:10px}
+.store-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;
+  border-radius:10px;font-size:9.5px;font-weight:700;margin-bottom:6px}
+.store-redis{background:rgba(239,68,68,.15);color:#f87171}
+.store-sqlite{background:rgba(59,130,246,.15);color:#60a5fa}
+.store-chroma{background:rgba(168,85,247,.15);color:#c084fc}
+.store-entry{background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  padding:6px 8px;margin-bottom:3px;font-size:10px}
+.store-key{color:var(--muted);font-family:monospace;font-size:9.5px}
+.store-val{color:var(--text);margin-top:1px;font-size:10px}
+.store-ttl{color:var(--teal);font-size:9px;float:right}
+
+/* Compare bar */
+.cmp-bar{display:none;padding:7px 8px;border-top:1px solid var(--border);flex-shrink:0}
+.cmp-bar.show{display:block}
+.cmp-labels{font-size:10px;margin-bottom:5px}
+.cmp-labels span{display:block}
+.cmp-btn{width:100%;padding:5px;border-radius:6px;border:none;
+  background:var(--accent);color:#fff;font-size:11px;font-weight:600;cursor:pointer;margin-bottom:3px}
+.cmp-clear{background:transparent;border:1px solid var(--border);color:var(--muted)}
+
+/* Chat */
+.sb-chat{border-top:1px solid var(--border);flex-shrink:0;padding:8px}
+.chat-msgs{max-height:170px;overflow-y:auto;margin-bottom:6px;
+  display:flex;flex-direction:column;gap:4px}
+.msg{font-size:11px;line-height:1.5;padding:5px 8px;border-radius:6px}
+.msg.user{background:rgba(99,102,241,.2);color:#c7d2fe;align-self:flex-end;text-align:right}
+.msg.bot{background:var(--bg3);color:var(--text);align-self:flex-start}
+.msg.bot.ask{border-left:2px solid var(--amber)}
+.msg.thinking{color:var(--muted);font-style:italic}
+.chat-row{display:flex;gap:5px}
+.chat-in{flex:1;background:var(--bg3);border:1px solid var(--border);
+  border-radius:6px;padding:6px 8px;font-size:11px;color:var(--text);
+  resize:none;outline:none;height:34px;font-family:inherit}
+.chat-in:focus{border-color:var(--accent)}
+.chat-send{background:var(--accent);border:none;border-radius:6px;
+  color:#fff;font-size:12px;width:32px;cursor:pointer;flex-shrink:0}
+
+/* MAIN */
+.main{overflow-y:auto;padding:14px 18px 50px;display:flex;flex-direction:column;gap:14px}
+
+/* Agentic stepper */
+.agent-pipe{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:11px 13px}
+.agent-title{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.07em;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.asteps{display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:2px}
+.as{flex-shrink:0;background:var(--bg3);border:1px solid var(--border);
+  border-radius:7px;padding:5px 9px;text-align:center;min-width:72px;transition:all .2s}
+.as .ai{font-size:15px;margin-bottom:1px}
+.as .an{font-size:9px;font-weight:700;color:var(--text)}
+.as .ab{font-size:8px;color:var(--muted);margin-top:1px}
+.as.act{border-color:var(--accent);background:rgba(99,102,241,.15);
+  box-shadow:0 0 8px rgba(99,102,241,.3)}
+.as.done{border-color:var(--green);background:rgba(34,197,94,.07)}
+.as.err{border-color:var(--red);background:rgba(239,68,68,.07)}
+.aa{color:var(--muted);font-size:14px;padding:0 2px;flex-shrink:0}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
 .dot.spin{background:var(--amber);animation:pulse .7s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.bg-pill{font-size:9px;padding:2px 7px;border-radius:9px;
+  background:rgba(59,130,246,.15);color:var(--blue);font-weight:600}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
 
-/* ── Main scrollable area ── */
-.main{overflow-y:auto;padding:16px 20px 40px;display:flex;flex-direction:column;gap:18px;
-  background:var(--bg)}
-
-/* ── Pipeline stepper ── */
-.pipe{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
-  padding:12px 14px}
-.pipe-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;
-  letter-spacing:.07em;margin-bottom:10px}
-.pipe-steps{display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:2px}
-.ps{flex-shrink:0;background:var(--bg3);border:1px solid var(--border);
-  border-radius:7px;padding:6px 10px;text-align:center;min-width:76px}
-.ps .pi{font-size:15px;margin-bottom:1px}
-.ps .pn{font-size:10px;font-weight:600;color:var(--text)}
-.ps .pb{font-size:9px;color:var(--muted)}
-.ps.act{border-color:var(--accent);background:rgba(99,102,241,.12)}
-.ps.done{border-color:var(--green);background:rgba(34,197,94,.06)}
-.pa{color:var(--muted);font-size:14px;padding:0 3px;flex-shrink:0}
-
-/* ── KPI strip ── */
-.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
-.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:11px 13px}
-.kpi .kl{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;
-  letter-spacing:.07em;margin-bottom:3px}
-.kpi .kv{font-size:21px;font-weight:700;line-height:1.1;margin-bottom:1px}
-.kpi .ks{font-size:10px;color:var(--muted)}
-.kpi .kd{font-size:10.5px;font-weight:600;margin-top:3px}
+/* KPIs */
+.krow{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.kl{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.kv{font-size:19px;font-weight:700;line-height:1.1;margin-bottom:1px}
+.ks{font-size:10px;color:var(--muted)}
+.kd{font-size:10px;font-weight:600;margin-top:2px}
 .dp{color:var(--green)}.dn{color:var(--red)}.dz{color:var(--muted)}
 
-/* ── Section headers ── */
-.sec-head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
-.sec-head h2{font-size:13px;font-weight:700;color:#fff}
-.sec-head span{font-size:11px;color:var(--muted)}
-.sec-tag{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;
-  background:rgba(99,102,241,.2);color:var(--accent);margin-left:4px}
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:13px 15px}
+.card.gnn{border-color:rgba(168,85,247,.3);background:rgba(168,85,247,.03)}
+.ct{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.06em;margin-bottom:11px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tag{font-size:9px;padding:1px 7px;border-radius:9px;font-weight:600}
+.tb{background:rgba(99,102,241,.2);color:#818cf8}
+.ta{background:rgba(34,197,94,.15);color:#4ade80}
+.td{background:rgba(239,68,68,.15);color:#f87171}
+.tg{background:rgba(168,85,247,.2);color:#c084fc}
 
-/* ── Cards ── */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
-.card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;
-  letter-spacing:.06em;margin-bottom:12px;display:flex;align-items:center;gap:6px}
-.card-title .sub{font-size:10px;font-weight:500;color:var(--accent);
-  text-transform:none;letter-spacing:0}
-.before-after-tag{font-size:9px;padding:1px 6px;border-radius:8px;font-weight:600;margin-left:4px}
-.ba-before{background:rgba(99,102,241,.2);color:#818cf8}
-.ba-after{background:rgba(34,197,94,.15);color:#4ade80}
-.ba-delta{background:rgba(239,68,68,.15);color:#f87171}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+canvas{max-height:195px;width:100%!important}
+hr.div{border:none;border-top:1px solid var(--border);margin:11px 0}
 
-/* ── Grid layouts ── */
-.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
-canvas{max-height:210px;width:100%!important}
-.canvas-full canvas{max-height:240px}
+/* GNN cards */
+.gnn-pred{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+.gnn-kpi{background:var(--bg3);border:1px solid rgba(168,85,247,.25);border-radius:8px;padding:10px 12px}
+.gnn-kpi .gl{font-size:9px;color:var(--purple);font-weight:700;text-transform:uppercase;margin-bottom:3px}
+.gnn-kpi .gv{font-size:18px;font-weight:700}
+.gnn-kpi .gs{font-size:10px;color:var(--muted);margin-top:1px}
+.gnn-kpi .gd{font-size:10px;font-weight:600;margin-top:2px}
 
-/* ── Heatmap ── */
-.hm-wrap{overflow:auto;border-radius:7px;background:var(--bg3);padding:8px}
-.hm-wrap canvas{max-height:none!important;width:100%!important;height:auto!important}
-
-/* ── Divider ── */
-.divider{border:none;border-top:1px solid var(--border);margin:4px 0}
-
-/* ── Table ── */
-.tbl{width:100%;border-collapse:collapse;font-size:11.5px}
-.tbl th{color:var(--muted);font-weight:600;padding:5px 8px;text-align:left;
+/* Switch table */
+.sw-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.sw-table th{color:var(--muted);font-weight:600;padding:4px 8px;text-align:left;
   border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase}
-.tbl td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:middle}
-.tbl tr:hover td{background:rgba(255,255,255,0.015)}
-.ibar{display:inline-block;height:5px;border-radius:3px;margin-right:5px;vertical-align:middle}
+.sw-table td{padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.03)}
+.sw-badge{display:inline-block;padding:1px 6px;border-radius:8px;font-size:9.5px;
+  font-weight:700;background:rgba(168,85,247,.2);color:var(--purple)}
+.sw-rank{font-size:11px;font-weight:700;color:var(--text)}
+.score-bar{display:inline-block;height:4px;border-radius:2px;background:var(--purple);
+  vertical-align:middle;margin-right:4px}
 
-/* ── RAG ── */
-.rag-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.rag-card{border-radius:8px;padding:12px 14px;border-left:3px solid}
+/* RAG */
+.rag-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.rc_{border-radius:7px;padding:10px 12px;border-left:3px solid}
 .rh{background:rgba(239,68,68,.07);border-color:var(--red)}
 .rm{background:rgba(245,158,11,.07);border-color:var(--amber)}
 .rl{background:rgba(34,197,94,.07);border-color:var(--green)}
-.rt{font-size:12px;font-weight:700;margin-bottom:5px}
-.rh .rt{color:var(--red)}.rm .rt{color:var(--amber)}.rl .rt{color:var(--green)}
-.rx{font-size:11px;color:var(--text);line-height:1.65;margin-bottom:5px}
-.rc{font-size:10.5px;color:var(--muted);font-style:italic;line-height:1.5;margin-bottom:5px}
-.rr{font-size:11px;color:var(--teal);line-height:1.5}
+.rtl{font-size:11.5px;font-weight:700;margin-bottom:4px}
+.rh .rtl{color:var(--red)}.rm .rtl{color:var(--amber)}.rl .rtl{color:var(--green)}
+.rx{font-size:10.5px;line-height:1.6;margin-bottom:3px}
+.rctx{font-size:10px;color:var(--muted);font-style:italic;margin-bottom:2px}
+.rrec{font-size:10.5px;color:var(--teal)}
 
-/* ── Findings ── */
-.findings-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.finding{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
-.finding .fk{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;
-  letter-spacing:.06em;margin-bottom:4px}
-.finding .fv{font-size:12px;color:var(--text);font-weight:500}
+/* Comparison */
+.cmp-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.cmp-kpi{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:9px 11px}
+.cmp-kpi .ck{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px}
+.cmp-kpi .cv{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.cmp-kpi .cv span{font-size:11.5px;font-weight:600}
+.ca-clr{color:#4ade80}.cb-clr{color:var(--amber)}
 
-/* ── Topo svg ── */
-#topo-svg{width:100%;background:var(--bg3);border-radius:8px}
+/* Findings grid */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.fi{background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:8px 10px}
+.fk{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.fv{font-size:11.5px;color:var(--text)}
 
-/* ── Legend row ── */
-.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
-.leg{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted)}
-.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.leg-line{width:20px;height:2px;border-radius:1px;flex-shrink:0}
+/* Topo */
+#topo-svg{width:100%;background:var(--bg3);border-radius:7px}
+
+/* Background spinner */
+.bg-spin{display:flex;align-items:center;gap:8px;padding:18px;
+  color:var(--muted);font-size:12px;justify-content:center}
+.sp-dot{width:5px;height:5px;border-radius:50%;background:var(--blue);animation:pulse .8s infinite}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{color:var(--muted);font-weight:600;padding:4px 7px;text-align:left;
+  border-bottom:1px solid var(--border);font-size:9.5px;text-transform:uppercase}
+.tbl td{padding:4px 7px;border-bottom:1px solid rgba(255,255,255,.03)}
+.ibar{display:inline-block;height:4px;border-radius:2px;margin-right:4px;vertical-align:middle}
+
+/* Query guide */
+.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:6px}
+.guide-item{background:var(--bg3);border:1px solid var(--border);border-radius:7px;
+  padding:9px 11px;cursor:pointer;transition:all .15s}
+.guide-item:hover{border-color:var(--accent);background:rgba(99,102,241,.07)}
+.guide-item .qt{font-size:10px;font-weight:700;color:var(--accent);margin-bottom:3px}
+.guide-item .qq{font-size:11px;color:var(--text);line-height:1.4;font-style:italic}
+.guide-item .qr{font-size:9.5px;color:var(--muted);margin-top:3px}
 </style>
 </head>
 <body>
 <div class="shell">
 
-<!-- ══ SIDEBAR ══ -->
+<!-- SIDEBAR -->
 <div class="sidebar">
-  <div class="sidebar-head">
-    <h1>IEEE 33-Bus DNR</h1>
-    <p>Pandapower BFS · Real power flow<br>Before &amp; After · RAG Explainability</p>
+  <div class="sb-head">
+    <h1>DNR Copilot <span style="color:var(--accent);font-weight:400">v3</span></h1>
+    <p>Agentic DNR · GraphTransformer GNN · RAG Memory · IEEE 33-Bus</p>
   </div>
-  <div class="sidebar-scroll">
-    <div class="slabel">Test Scenarios</div>
-    <div id="sc-list"></div>
+
+  <!-- Memory tabs -->
+  <div class="mem-tabs">
+    <div class="mem-tab on" onclick="showMemTab('history',this)">📋 Queries</div>
+    <div class="mem-tab"   onclick="showMemTab('store',this)">🗄️ Memory</div>
   </div>
-  <div class="status-bar">
-    <div class="dot" id="dot"></div>
-    <span id="stxt">Select a scenario</span>
+
+  <!-- Query history panel -->
+  <div class="mem-panel on" id="tab-history">
+    <div class="slabel">Query History <button onclick="refreshMemory()">↻</button></div>
+    <div id="mem-list"><div style="color:var(--muted);font-size:11px;padding:4px 2px">No queries yet.</div></div>
+  </div>
+
+  <!-- Memory store panel -->
+  <div class="mem-panel" id="tab-store">
+    <div id="store-view"><div style="color:var(--muted);font-size:11px;padding:4px">Run a query to see memory.</div></div>
+  </div>
+
+  <!-- Compare bar -->
+  <div class="cmp-bar" id="cmp-bar">
+    <div class="cmp-labels">
+      <span id="cmp-a-lbl" style="color:var(--green)">A: —</span>
+      <span id="cmp-b-lbl" style="color:var(--amber)">B: —</span>
+    </div>
+    <button class="cmp-btn" onclick="runCompare()">Compare A vs B ›</button>
+    <button class="cmp-btn cmp-clear" onclick="clearCmp()">✕ Clear</button>
+  </div>
+
+  <!-- Chat -->
+  <div class="sb-chat">
+    <div class="chat-msgs" id="chat-msgs"></div>
+    <div class="chat-row">
+      <textarea class="chat-in" id="chat-in"
+        placeholder="Type a query or click an example below…"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+      <button class="chat-send" onclick="sendChat()">➤</button>
+    </div>
   </div>
 </div>
 
-<!-- ══ MAIN SCROLL ══ -->
+<!-- MAIN -->
 <div class="main" id="main">
 
-  <!-- Pipeline -->
-  <div class="pipe">
-    <div class="pipe-title">Analysis pipeline</div>
-    <div class="pipe-steps" id="pipe">
-      <div class="ps" id="fp0"><div class="pi">📋</div><div class="pn">Scenario</div><div class="pb">select</div></div>
-      <div class="pa">›</div>
-      <div class="ps" id="fp1"><div class="pi">⚡</div><div class="pn">S1 BFS</div><div class="pb">power flow</div></div>
-      <div class="pa">›</div>
-      <div class="ps" id="fp2"><div class="pi">📏</div><div class="pn">S2 Distance</div><div class="pb">elec. dist</div></div>
-      <div class="pa">›</div>
-      <div class="ps" id="fp3"><div class="pi">🌊</div><div class="pn">S3 Propagation</div><div class="pb">BII · VFI</div></div>
-      <div class="pa">›</div>
-      <div class="ps" id="fp4"><div class="pi">⚗️</div><div class="pn">S4 dV/dQ</div><div class="pb">sensitivity</div></div>
-      <div class="pa">›</div>
-      <div class="ps" id="fp5"><div class="pi">🗺️</div><div class="pn">S5 Zones</div><div class="pb">vulnerability</div></div>
-      <div class="pa">›</div>
-      <div class="ps" id="fp6"><div class="pi">🔢</div><div class="pn">S6 Indices</div><div class="pb">ECI·DPF</div></div>
-      <div class="pa">›</div>
-      <div class="ps" id="fp7"><div class="pi">🧠</div><div class="pn">RAG</div><div class="pb">explain</div></div>
-      <div class="pa">›</div>
-      <div class="ps" id="fp8"><div class="pi">✅</div><div class="pn">Done</div><div class="pb">visualize</div></div>
+  <!-- Agentic pipeline stepper -->
+  <div class="agent-pipe">
+    <div class="agent-title">
+      <div style="display:flex;align-items:center;gap:7px">
+        <div class="dot" id="dot"></div>
+        <span id="stxt">Ready — type a query in the chat</span>
+      </div>
+      <span class="bg-pill" id="bg-pill" style="display:none">S3/S4 background…</span>
+    </div>
+    <div class="asteps">
+      <div class="as" id="ap0"><div class="ai">💬</div><div class="an">Receive</div><div class="ab">query</div></div>
+      <div class="aa">›</div>
+      <div class="as" id="ap1"><div class="ai">🧠</div><div class="an">Plan</div><div class="ab">LLM interprets</div></div>
+      <div class="aa">›</div>
+      <div class="as" id="ap2"><div class="ai">🔧</div><div class="an">Tool Select</div><div class="ab">BFS / GNN / RAG</div></div>
+      <div class="aa">›</div>
+      <div class="as" id="ap3"><div class="ai">⚡</div><div class="an">Analysis</div><div class="ab">power flow once</div></div>
+      <div class="aa">›</div>
+      <div class="as" id="ap4"><div class="ai">🔄</div><div class="an">Background</div><div class="ab">S3·S4 loops</div></div>
+      <div class="aa">›</div>
+      <div class="as" id="ap5"><div class="ai">🤖</div><div class="an">GNN Predict</div><div class="ab">switching config</div></div>
+      <div class="aa">›</div>
+      <div class="as" id="ap6"><div class="ai">📚</div><div class="an">Mem Retrieve</div><div class="ab">RAG + cases</div></div>
+      <div class="aa">›</div>
+      <div class="as" id="ap7"><div class="ai">💡</div><div class="an">Synthesize</div><div class="ab">insights</div></div>
+      <div class="aa">›</div>
+      <div class="as" id="ap8"><div class="ai">✅</div><div class="an">Explain</div><div class="ab">visualize</div></div>
     </div>
   </div>
 
-  <!-- ══ KPI STRIP ══ -->
-  <div class="kpi-strip" id="kpis">
-    <div class="kpi"><div class="kl">Min Voltage</div><div class="kv" id="k-mv">—</div><div class="ks" id="k-mv-b">before: —</div><div class="kd" id="k-mv-d">—</div></div>
-    <div class="kpi"><div class="kl">Buses &lt; 0.95 pu</div><div class="kv" id="k-bv">—</div><div class="ks" id="k-bv-b">before: —</div><div class="kd" id="k-bv-d">—</div></div>
-    <div class="kpi"><div class="kl">Total P Loss</div><div class="kv" id="k-pl">—</div><div class="ks" id="k-pl-b">before: —</div><div class="kd" id="k-pl-d">—</div></div>
-    <div class="kpi"><div class="kl">Total Q Loss</div><div class="kv" id="k-ql">—</div><div class="ks" id="k-ql-b">before: —</div><div class="kd" id="k-ql-d">—</div></div>
-    <div class="kpi"><div class="kl">Max Branch Load</div><div class="kv" id="k-ml">—</div><div class="ks" id="k-ml-b">before: —</div><div class="kd" id="k-ml-d">—</div></div>
+  <!-- KPI strip -->
+  <div class="krow">
+    <div class="kpi"><div class="kl">Min Voltage</div><div class="kv" id="k-mv">—</div><div class="ks" id="k-mv-b">before: —</div><div class="kd dz" id="k-mv-d">—</div></div>
+    <div class="kpi"><div class="kl">Buses &lt;0.95 pu</div><div class="kv" id="k-bv">—</div><div class="ks" id="k-bv-b">before: —</div><div class="kd dz" id="k-bv-d">—</div></div>
+    <div class="kpi"><div class="kl">P Loss (kW)</div><div class="kv" id="k-pl">—</div><div class="ks" id="k-pl-b">before: —</div><div class="kd dz" id="k-pl-d">—</div></div>
+    <div class="kpi"><div class="kl">Q Loss (kVAR)</div><div class="kv" id="k-ql">—</div><div class="ks" id="k-ql-b">before: —</div><div class="kd dz" id="k-ql-d">—</div></div>
+    <div class="kpi"><div class="kl">Max Loading</div><div class="kv" id="k-ml">—</div><div class="ks" id="k-ml-b">before: —</div><div class="kd dz" id="k-ml-d">—</div></div>
   </div>
 
-  <!-- ══ S1 POWER FLOW ══ -->
+  <!-- S1 Power Flow -->
   <div class="card">
-    <div class="sec-head"><h2>S1 — Power Flow Results</h2><span>pandapower BFS · base vs scenario</span></div>
-
-    <div class="card-title">Voltage Profile — all 33 buses
-      <span class="before-after-tag ba-before">● before</span>
-      <span class="before-after-tag ba-after">● after</span>
-    </div>
-    <div class="g2" style="margin-bottom:14px">
-      <div><canvas id="c-vprofile"></canvas></div>
-      <div><canvas id="c-dv"></canvas></div>
-    </div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">Branch Loading %
-      <span class="before-after-tag ba-before">● before</span>
-      <span class="before-after-tag ba-after">● after</span>
-      <span class="before-after-tag ba-delta">● delta</span>
-    </div>
-    <div class="g2" style="margin-bottom:14px">
-      <div><canvas id="c-loading"></canvas></div>
-      <div><canvas id="c-dload"></canvas></div>
-    </div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">Branch P Losses (kW)
-      <span class="before-after-tag ba-before">● before</span>
-      <span class="before-after-tag ba-after">● after</span>
-    </div>
-    <div class="g2" style="margin-bottom:14px">
-      <div><canvas id="c-ploss"></canvas></div>
-      <div><canvas id="c-qloss"></canvas></div>
-    </div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">Voltage Stability Index per Branch
-      <span class="before-after-tag ba-before">● before</span>
-      <span class="before-after-tag ba-after">● after</span>
-    </div>
-    <div><canvas id="c-vsi"></canvas></div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">Network Topology — voltage heatmap
-      <span class="before-after-tag ba-after">● coloured by V_pu after</span>
-    </div>
-    <svg id="topo-svg" viewBox="0 0 560 310"></svg>
-    <div class="legend">
-      <div class="leg"><div class="leg-dot" style="background:#22c55e"></div>≥ 0.95 pu (normal)</div>
-      <div class="leg"><div class="leg-dot" style="background:#f59e0b"></div>0.90–0.95 pu (warning)</div>
-      <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>&lt; 0.90 pu (critical)</div>
-    </div>
+    <div class="ct">S1 — Power Flow <span class="tag tb">● before</span><span class="tag ta">● after</span><span class="tag td">● Δ</span></div>
+    <div class="g2" style="margin-bottom:12px">
+      <canvas id="c-vprofile"></canvas><canvas id="c-dv"></canvas>
+    </div><hr class="div">
+    <div class="g2" style="margin-bottom:12px">
+      <canvas id="c-loading"></canvas><canvas id="c-dload"></canvas>
+    </div><hr class="div">
+    <div class="g2" style="margin-bottom:12px">
+      <canvas id="c-ploss"></canvas><canvas id="c-qloss"></canvas>
+    </div><hr class="div">
+    <canvas id="c-vsi" style="margin-bottom:12px"></canvas>
+    <hr class="div">
+    <div class="ct" style="margin-top:10px">Network Topology <span class="tag ta">● V_pu heat</span></div>
+    <svg id="topo-svg" viewBox="0 0 560 295"></svg>
   </div>
 
-  <!-- ══ S2 ELECTRICAL DISTANCE ══ -->
+  <!-- S2 -->
   <div class="card">
-    <div class="sec-head"><h2>S2 — Electrical Distance Analysis</h2><span>path impedance · feeder depth · correlation</span></div>
-
-    <div class="g2" style="margin-bottom:14px">
-      <div>
-        <div class="card-title">Cumulative |Z| from Substation (Ω)</div>
-        <canvas id="c-cumz"></canvas>
-      </div>
-      <div>
-        <div class="card-title">Feeder Depth (hops)</div>
-        <canvas id="c-depth"></canvas>
-      </div>
-    </div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">|Z| vs V_pu Scatter
-      <span class="sub">higher impedance → lower voltage (r shown in title)</span>
-    </div>
-    <div style="margin-bottom:14px"><canvas id="c-zv"></canvas></div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">33×33 Electrical Distance Matrix
-      <span class="sub">heatmap — blue=near, red=far</span>
-    </div>
-    <div class="hm-wrap"><canvas id="c-edm" style="max-height:380px"></canvas></div>
+    <div class="ct">S2 — Electrical Distance</div>
+    <div class="g2" style="margin-bottom:12px">
+      <canvas id="c-cumz"></canvas><canvas id="c-depth"></canvas>
+    </div><hr class="div">
+    <canvas id="c-zv"></canvas>
   </div>
 
-  <!-- ══ S3 DISTURBANCE PROPAGATION ══ -->
+  <!-- S3 (background) -->
   <div class="card">
-    <div class="sec-head"><h2>S3 — Active Power Disturbance Propagation</h2><span>influence matrix · BII · VFI</span></div>
-
-    <div class="g2" style="margin-bottom:14px">
-      <div>
-        <div class="card-title">Bus Influence Index (BII)
-          <span class="sub">how much bus i affects others (+20% ΔP)</span>
-        </div>
-        <canvas id="c-bii"></canvas>
-      </div>
-      <div>
-        <div class="card-title">Voltage Fragility Index (VFI)
-          <span class="sub">how much bus j is affected by all disturbances</span>
-        </div>
-        <canvas id="c-vfi"></canvas>
-      </div>
-    </div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">Propagation Profiles — key buses perturbed +20%
-      <span class="sub">|ΔV| across all 33 buses</span>
-    </div>
-    <div style="margin-bottom:14px"><canvas id="c-propprofile"></canvas></div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">BII vs VFI Scatter
-      <span class="sub">influential (high BII) vs vulnerable (high VFI) — coloured by V_pu</span>
-    </div>
-    <div style="margin-bottom:14px"><canvas id="c-bii-vfi"></canvas></div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">33×33 Influence Matrix M20
-      <span class="sub">row=source bus, col=affected bus · +20% ΔP perturbation</span>
-    </div>
-    <div class="hm-wrap"><canvas id="c-M20" style="max-height:380px"></canvas></div>
+    <div class="ct">S3 — Disturbance Propagation <span class="bg-pill" id="s3pill" style="display:none">computing…</span></div>
+    <div id="s3-wrap"><div class="bg-spin"><div class="sp-dot"></div>Running S3 in background…</div></div>
   </div>
 
-  <!-- ══ S4 REACTIVE SENSITIVITY ══ -->
+  <!-- S4 (background) -->
   <div class="card">
-    <div class="sec-head"><h2>S4 — Reactive Power Sensitivity (dV/dQ)</h2><span>weak bus identification</span></div>
-
-    <div class="g2" style="margin-bottom:14px">
-      <div>
-        <div class="card-title">Self-Sensitivity −dV_i/dQ_i (pu/kVAR)
-          <span class="sub">higher = weaker reactive support</span>
-        </div>
-        <canvas id="c-self"></canvas>
-      </div>
-      <div>
-        <div class="card-title">Column-Sum Exposure Σ|dV/dQ|
-          <span class="sub">total reactive vulnerability per bus</span>
-        </div>
-        <canvas id="c-colsum"></canvas>
-      </div>
-    </div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">Top 15 Weakest Buses — ranked by self-sensitivity</div>
-    <div style="margin-bottom:14px"><canvas id="c-weakrank"></canvas></div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">33×33 dV/dQ Sensitivity Matrix
-      <span class="sub">heatmap — intensity = voltage impact per kVAR injected</span>
-    </div>
-    <div class="hm-wrap"><canvas id="c-dvdq" style="max-height:380px"></canvas></div>
+    <div class="ct">S4 — Reactive Sensitivity dV/dQ <span class="bg-pill" id="s4pill" style="display:none">computing…</span></div>
+    <div id="s4-wrap"><div class="bg-spin"><div class="sp-dot"></div>Running S4 in background…</div></div>
   </div>
 
-  <!-- ══ S5 ZONE VULNERABILITY ══ -->
+  <!-- S5 -->
   <div class="card">
-    <div class="sec-head"><h2>S5 — Feeder Zone Vulnerability</h2><span>near-slack · mid-feeder · far-end comparison</span></div>
-
-    <div class="g2" style="margin-bottom:14px">
-      <div>
-        <div class="card-title">Zone Mean |ΔV| (%) Profile
-          <span class="sub">average propagation across all buses</span>
-        </div>
-        <canvas id="c-zonemean"></canvas>
-      </div>
-      <div>
-        <div class="card-title">Zone Peak Amplification
-          <span class="sub">worst-case |ΔV| per source bus, grouped by zone</span>
-        </div>
-        <canvas id="c-zonepeak"></canvas>
-      </div>
-    </div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">Bus 18 Voltage Degradation vs Disturbance Location
-      <span class="sub">V@Bus18 as load increases on each main-feeder bus at 3 perturbation levels</span>
-    </div>
-    <div style="margin-bottom:14px"><canvas id="c-v18deg"></canvas></div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">|ΔV| Attenuation vs Electrical Distance
-      <span class="sub">disturbance decays with distance from source — 3 key source buses</span>
-    </div>
-    <div><canvas id="c-atten"></canvas></div>
+    <div class="ct">S5 — Zone Vulnerability</div>
+    <div class="g2" style="margin-bottom:12px">
+      <canvas id="c-zone-v"></canvas><canvas id="c-feeder-end"></canvas>
+    </div><hr class="div">
+    <canvas id="c-att"></canvas>
   </div>
 
-  <!-- ══ S6 INDICES ══ -->
+  <!-- S6 -->
   <div class="card">
-    <div class="sec-head"><h2>S6 — Novel Electrical Indices</h2><span>BII · VFI · DPF · ECI · Instability</span></div>
-
-    <div class="g2" style="margin-bottom:14px">
-      <div>
-        <div class="card-title">ECI — Electrical Centrality Index
-          <span class="sub">closeness + inv(Z) + BII + VFI weighted</span>
-        </div>
-        <canvas id="c-eci"></canvas>
-      </div>
-      <div>
-        <div class="card-title">Instability Score
-          <span class="sub">norm(VFI + self_dVdQ + V_drop)</span>
-        </div>
-        <canvas id="c-instab"></canvas>
-      </div>
+    <div class="ct">S6 — Indices (ECI · Instability · DPF · BII · VFI)
+      <span id="s6-proxy" style="font-size:9px;color:var(--muted)"></span>
     </div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">DPF — Disturbance Propagation Factor
-      <span class="sub">off-diagonal reach ratio per bus</span>
-    </div>
-    <div style="margin-bottom:14px"><canvas id="c-dpf"></canvas></div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">Multi-Index Overlay — normalised
-      <span class="sub">BII · VFI · ECI · Instability on one scale</span>
-    </div>
-    <div style="margin-bottom:14px"><canvas id="c-multi"></canvas></div>
-
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">Top 10 Buses by ECI — comparison table</div>
+    <div class="g2" style="margin-bottom:12px">
+      <canvas id="c-eci"></canvas><canvas id="c-instab"></canvas>
+    </div><hr class="div">
+    <div class="g2" style="margin-bottom:12px">
+      <canvas id="c-dpf"></canvas><canvas id="c-multi"></canvas>
+    </div><hr class="div">
     <div id="s6-table" style="overflow-x:auto"></div>
   </div>
 
-  <!-- ══ S9 COMPOSITE RISK ══ -->
-  <div class="card">
-    <div class="sec-head"><h2>S9 — Composite Risk &amp; Advanced Metrics</h2><span>risk · radar · impact · VSI</span></div>
-
-    <div class="g2" style="margin-bottom:14px">
-      <div>
-        <div class="card-title">Composite Risk Score per Bus
-          <span class="sub">norm(VFI + self_dVdQ + V_drop)</span>
-        </div>
-        <canvas id="c-risk"></canvas>
-      </div>
-      <div>
-        <div class="card-title">Mean |ΔV| (%) at 3 Perturbation Levels
-          <span class="sub">5% · 10% · 20% load increase</span>
-        </div>
-        <canvas id="c-impact"></canvas>
-      </div>
+  <!-- GNN Prediction -->
+  <div class="card gnn">
+    <div class="ct">🤖 GNN Prediction — GraphTransformer
+      <span class="tag tg">● 4-layer attention</span>
+      <span id="gnn-vl" style="font-size:9px;color:var(--muted)"></span>
     </div>
-
-    <hr class="divider">
-    <div class="g2" style="margin-top:12px">
-      <div>
-        <div class="card-title">Top 5 Buses — Multi-Index Radar
-          <span class="sub">BII · VFI · DPF · ECI · Instability normalised</span>
-        </div>
-        <canvas id="c-radar"></canvas>
-      </div>
-      <div>
-        <div class="card-title">VSI per Branch — Voltage Stability Index</div>
-        <canvas id="c-vsi9"></canvas>
-      </div>
+    <div id="gnn-panel">
+      <div style="color:var(--muted);font-size:12px">Run a scenario to see GNN predictions.</div>
     </div>
   </div>
 
-  <!-- ══ RAG EXPLAINABILITY ══ -->
+  <!-- S9 Composite -->
   <div class="card">
-    <div class="sec-head"><h2>🧠 RAG Explainability</h2><span>knowledge-grounded analysis of this scenario</span></div>
-    <div id="rag-panel">
-      <div style="color:var(--muted);font-size:13px">Run a scenario to see explanations.</div>
+    <div class="ct">S9 — Composite Risk · Radar · VSI</div>
+    <div class="g2" style="margin-bottom:12px">
+      <canvas id="c-risk"></canvas><canvas id="c-radar"></canvas>
+    </div><hr class="div">
+    <canvas id="c-vsi9"></canvas>
+  </div>
+
+  <!-- RAG -->
+  <div class="card">
+    <div class="ct">📚 RAG — Knowledge & Case Memory</div>
+    <div id="rag-panel"><div style="color:var(--muted);font-size:12px">Run a scenario to see RAG analysis.</div></div>
+  </div>
+
+  <!-- Comparison (hidden until triggered) -->
+  <div class="card" id="cmp-card" style="display:none">
+    <div class="ct">⚖️ Comparison
+      <span class="tag ta" id="cmp-ta">A</span>
+      <span style="color:var(--muted)">vs</span>
+      <span class="tag" style="background:rgba(245,158,11,.15);color:var(--amber)" id="cmp-tb">B</span>
+    </div>
+    <div class="cmp-kpi-row" id="cmp-kpis"></div>
+    <div class="g2" style="margin-bottom:12px">
+      <canvas id="c-cmp-v"></canvas><canvas id="c-cmp-dv"></canvas>
+    </div><hr class="div">
+    <div class="g2">
+      <canvas id="c-cmp-load"></canvas><canvas id="c-cmp-pl"></canvas>
     </div>
   </div>
 
-  <!-- ══ S10 RESEARCH INSIGHTS ══ -->
+  <!-- Query Guide -->
   <div class="card">
-    <div class="sec-head"><h2>S10 — Automated Research Insights</h2><span>correlations · rankings · system summary</span></div>
-    <div class="g4" id="s10-kpis" style="margin-bottom:14px"></div>
-    <hr class="divider">
-    <div class="card-title" style="margin-top:12px">Key Findings</div>
-    <div class="findings-grid" id="s10-findings"></div>
+    <div class="ct">💡 Query Guide — Example Queries</div>
+    <div class="guide-grid" id="guide-grid"></div>
+  </div>
+
+  <!-- S10 -->
+  <div class="card">
+    <div class="ct">S10 — Research Insights</div>
+    <div class="krow" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px" id="s10-kpis"></div>
+    <hr class="div">
+    <div class="fg" id="s10-findings"></div>
   </div>
 
 </div><!-- /main -->
 </div><!-- /shell -->
 
 <script>
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 // GLOBALS
-// ═══════════════════════════════════
-const BUSES=Array.from({length:33},(_,i)=>i+1);
-const BLABS=Array.from({length:32},(_,i)=>`${i+1}-${i+2}`);
-let charts={};
-let TOPO=null;
-
-const COL={
-  before:'rgba(99,102,241,', after:'rgba(34,197,94,',
-  red:'rgba(239,68,68,',     amber:'rgba(245,158,11,',
-  blue:'rgba(59,130,246,',   teal:'rgba(20,184,166,',
-  pink:'rgba(236,72,153,',   purple:'rgba(168,85,247,',
-};
-const c=(n,a)=>COL[n]+a+')';
+// ═══════════════════════════════════════════════
+const N=33,BUSES=Array.from({length:33},(_,i)=>i+1),BLABS=Array.from({length:32},(_,i)=>`${i+1}-${i+2}`);
+let charts={},TOPO=null,cmpA=null,cmpB=null,bgTimer=null,curQid=null;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const norm=arr=>{const mn=Math.min(...arr),r=(Math.max(...arr)-mn)||1;return arr.map(v=>(v-mn)/r)};
 const vCol=v=>v<0.90?'#ef4444':v<0.95?'#f59e0b':'#22c55e';
 const lCol=l=>l>100?'#ef4444':l>80?'#f59e0b':'#3b82f6';
-const norm=arr=>{const mn=Math.min(...arr),r=(Math.max(...arr)-mn)||1;return arr.map(v=>(v-mn)/r)};
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const C={b:'rgba(99,102,241,',a:'rgba(34,197,94,',r:'rgba(239,68,68,',
+  am:'rgba(245,158,11,',bl:'rgba(59,130,246,',t:'rgba(20,184,166,',p:'rgba(168,85,247,'};
+const c=(n,a)=>C[n]+a+')';
 
-// ── Status & stepper ──────────────────────────
-function setSt(msg,loading=false){
+// ── Stepper ──────────────────────────────────────
+function setSt(msg,load=false){
   document.getElementById('stxt').textContent=msg;
-  document.getElementById('dot').className='dot'+(loading?' spin':'');
+  document.getElementById('dot').className='dot'+(load?' spin':'');
 }
-function fp(n){
+function ap(n){
   for(let i=0;i<9;i++){
-    const el=document.getElementById('fp'+i);
-    el.classList.remove('act','done');
+    const el=document.getElementById('ap'+i);
+    el.classList.remove('act','done','err');
     if(i<n)el.classList.add('done');
     if(i===n)el.classList.add('act');
   }
 }
 
-// ── Chart helpers ──────────────────────────────
+// ── Chart helpers ─────────────────────────────────
 const CD={
-  plugins:{legend:{labels:{color:'#7c8399',font:{size:10},boxWidth:10,padding:6}}},
-  scales:{
-    x:{ticks:{color:'#7c8399',font:{size:8.5},maxRotation:45},
-       grid:{color:'rgba(255,255,255,0.04)'}},
-    y:{ticks:{color:'#7c8399',font:{size:9}},
-       grid:{color:'rgba(255,255,255,0.04)'}}
-  }
+  plugins:{legend:{labels:{color:'#7c8399',font:{size:9.5},boxWidth:8,padding:5}}},
+  scales:{x:{ticks:{color:'#7c8399',font:{size:7.5},maxRotation:45},grid:{color:'rgba(255,255,255,0.04)'}},
+          y:{ticks:{color:'#7c8399',font:{size:8}},grid:{color:'rgba(255,255,255,0.04)'}}}
 };
+const ttl=t=>({display:true,text:t,color:'#7c8399',font:{size:10},padding:{bottom:3}});
 function mk(id,cfg){
   if(charts[id]){charts[id].destroy();delete charts[id]}
   const cv=document.getElementById(id);if(!cv)return;
   charts[id]=new Chart(cv.getContext('2d'),cfg);
 }
-function title(t){return {display:true,text:t,color:'#7c8399',font:{size:10.5},padding:{bottom:6}}}
 
-// ── Heatmap pixel canvas ───────────────────────
-function heatmap(id,matrix,title_){
-  const canvas=document.getElementById(id);
-  if(!canvas||!matrix||!matrix.length)return;
-  const N=matrix.length;
-  const cs=Math.max(5,Math.min(12,Math.floor(340/N)));
-  const lp=24,tp=16;
-  canvas.width=lp+N*cs; canvas.height=tp+N*cs;
-  canvas.style.width='100%';canvas.style.height='auto';
-  const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#1a1d27';ctx.fillRect(0,0,canvas.width,canvas.height);
-  let mx=0;matrix.forEach(row=>row.forEach(v=>{if(v>mx)mx=v}));
-  for(let i=0;i<N;i++)for(let j=0;j<N;j++){
-    const v=matrix[i][j]/(mx||1);
-    ctx.fillStyle=`rgb(${Math.round(239*v)},${Math.round(68+80*(1-v)*v*4)},${Math.round(68*(1-v))})`;
-    ctx.fillRect(lp+j*cs,tp+i*cs,cs-1,cs-1);
-  }
-  ctx.fillStyle='rgba(124,131,153,0.8)';ctx.font='7px sans-serif';
-  for(let i=0;i<N;i+=5){
-    ctx.fillText(i+1,lp+i*cs+cs/2-3,tp-3);
-    ctx.fillText(i+1,1,tp+i*cs+cs/2+3);
-  }
+// ── Memory tab ────────────────────────────────────
+function showMemTab(id,el){
+  document.querySelectorAll('.mem-tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.mem-panel').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('tab-'+id).classList.add('on');
 }
 
-// ═══════════════════════════════════
-// SCENARIOS
-// ═══════════════════════════════════
-async function loadScenarios(){
-  const d=await fetch('/viz/scenarios').then(r=>r.json());
-  const list=document.getElementById('sc-list');
-  list.innerHTML='';
-  Object.entries(d).forEach(([key,sc])=>{
-    const btn=document.createElement('button');
-    btn.className='sc-btn';btn.dataset.key=key;
-    btn.innerHTML=`<span class="scl">${sc.label}</span><span class="scd">${sc.description}</span>`;
-    btn.onclick=()=>run(key,btn);
-    list.appendChild(btn);
-  });
+// ── Memory store visualizer ──────────────────────
+function renderStore(queryId,label,meta){
+  const ts=meta?.timestamp?new Date(parseFloat(meta.timestamp)*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+  document.getElementById('store-view').innerHTML=`
+    <div class="store-section">
+      <div class="store-badge store-redis">🔴 Redis (hot cache)</div>
+      <div class="store-entry">
+        <div class="store-key">pf:{hash} <span class="store-ttl">TTL 1hr</span></div>
+        <div class="store-val">BFS result cached · V_pu[33] · loading[32] · Pl[32]</div>
+      </div>
+      <div class="store-entry">
+        <div class="store-key">qmeta:${queryId} <span class="store-ttl">permanent</span></div>
+        <div class="store-val">${label} · ${ts} · V=${meta?.min_V||'?'} · ${meta?.total_losses||'?'}kW</div>
+      </div>
+      <div class="store-entry">
+        <div class="store-key">query:history (sorted set) <span class="store-ttl">permanent</span></div>
+        <div class="store-val">score=${meta?.timestamp||'?'} · id=${queryId}</div>
+      </div>
+      <div class="store-entry">
+        <div class="store-key">bg:${queryId} <span class="store-ttl">TTL 1hr</span></div>
+        <div class="store-val">S3/S4 background results (when ready)</div>
+      </div>
+    </div>
+    <div class="store-section">
+      <div class="store-badge store-sqlite">🔵 LangGraph SQLite</div>
+      <div class="store-entry">
+        <div class="store-key">thread_id = ${queryId} <span class="store-ttl">permanent</span></div>
+        <div class="store-val">Full DNRState: s1+s2+s5+s6+s9+s10+knowledge+similar_cases</div>
+      </div>
+    </div>
+    <div class="store-section">
+      <div class="store-badge store-chroma">🟣 ChromaDB RAG</div>
+      <div class="store-entry">
+        <div class="store-key">dnr_cases · id=${queryId} <span class="store-ttl">permanent</span></div>
+        <div class="store-val">Embedding: "${label} losses=${meta?.total_losses||'?'}kW…"</div>
+      </div>
+      <div class="store-entry">
+        <div class="store-key">dnr_knowledge · 10 entries <span class="store-ttl">permanent</span></div>
+        <div class="store-val">voltage_violation · thermal_overload · BII · VFI · ECI · Fiedler…</div>
+      </div>
+    </div>`;
 }
 
-// ═══════════════════════════════════
-// TOPOLOGY
-// ═══════════════════════════════════
+// ── Query history ─────────────────────────────────
+async function refreshMemory(){
+  const d=await fetch('/viz/memory').then(r=>r.json());
+  const list=document.getElementById('mem-list');
+  if(!d.queries?.length){
+    list.innerHTML='<div style="color:var(--muted);font-size:11px;padding:4px">No queries yet.</div>';
+    return;
+  }
+  list.innerHTML=d.queries.map(q=>{
+    const qid=q.query_id;
+    const iA=cmpA===qid,iB=cmpB===qid;
+    const cls='mem-item'+(iA?' cmp-a':iB?' cmp-b':qid===curQid?' sel':'');
+    const ts=q.timestamp?new Date(parseFloat(q.timestamp)*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+    const minV=parseFloat(q.min_V||1).toFixed(3);
+    const loss=parseFloat(q.total_losses||0).toFixed(0);
+    return `<div class="${cls}" data-qid="${qid}" onclick="loadQuery('${qid}')">
+      <div class="mem-label">${q.label||qid}</div>
+      <div class="mem-meta">${ts} · V=${minV}pu · ${loss}kW</div>
+      <div class="mem-chk ${iA?'ca':iB?'cb':''}" onclick="toggleCmp('${qid}',event)">${iA?'A':iB?'B':''}</div>
+    </div>`;
+  }).join('');
+  updateCmpBar();
+}
+
+function toggleCmp(qid,e){
+  e.stopPropagation();
+  if(cmpA===qid)cmpA=null;
+  else if(cmpB===qid)cmpB=null;
+  else if(!cmpA)cmpA=qid;
+  else if(!cmpB)cmpB=qid;
+  else{cmpA=cmpB;cmpB=qid;}
+  refreshMemory();
+}
+function updateCmpBar(){
+  const bar=document.getElementById('cmp-bar');
+  if(cmpA||cmpB){
+    bar.classList.add('show');
+    document.getElementById('cmp-a-lbl').textContent='A: '+(cmpA||'—');
+    document.getElementById('cmp-b-lbl').textContent='B: '+(cmpB||'—');
+  } else {
+    bar.classList.remove('show');
+    document.getElementById('cmp-card').style.display='none';
+  }
+}
+function clearCmp(){cmpA=null;cmpB=null;refreshMemory();document.getElementById('cmp-card').style.display='none';}
+
+async function loadQuery(qid){
+  setSt('Loading…',true);
+  try{
+    const d=await fetch(`/viz/memory/${encodeURIComponent(qid)}`).then(r=>r.json());
+    if(d.s1)renderAll(d);
+    curQid=qid;
+    setSt('Loaded: '+(d.label||qid));
+    refreshMemory();
+  }catch(e){setSt('Load failed');}
+}
+
+async function runCompare(){
+  if(!cmpA||!cmpB)return alert('Select two queries (A and B)');
+  setSt('Comparing…',true);
+  try{
+    const d=await fetch('/viz/compare',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query_id_a:cmpA,query_id_b:cmpB,session_id:'default'})
+    }).then(r=>r.json());
+    renderComparison(d);
+    setSt('Comparison ready');
+    document.getElementById('cmp-card').scrollIntoView({behavior:'smooth'});
+  }catch(e){setSt('Compare failed: '+e.message);}
+}
+
+// ── Topology ──────────────────────────────────────
 async function loadTopo(){
-  TOPO=await fetch('/viz/topology').then(r=>r.json());
-  drawTopo(null);
+  TOPO=await fetch('/viz/topology').then(r=>r.json());drawTopo(null);
 }
 function drawTopo(vpu){
   if(!TOPO)return;
   const svg=document.getElementById('topo-svg');
-  const W=560,H=310,pad=28;
+  const W=560,H=295,pad=25;
   const xs=Object.values(TOPO.positions).map(p=>p[0]);
   const ys=Object.values(TOPO.positions).map(p=>p[1]);
   const [xmn,xmx]=[Math.min(...xs),Math.max(...xs)];
@@ -578,485 +602,478 @@ function drawTopo(vpu){
   const py=b=>pad+(TOPO.positions[b][1]-ymn)/(ymx-ymn||1)*(H-2*pad);
   let h='';
   TOPO.branches.forEach(br=>{
-    h+=`<line x1="${px(br.from)}" y1="${py(br.from)}" x2="${px(br.to)}" y2="${py(br.to)}" stroke="rgba(255,255,255,0.13)" stroke-width="1.3"/>`;
+    h+=`<line x1="${px(br.from)}" y1="${py(br.from)}" x2="${px(br.to)}" y2="${py(br.to)}" stroke="rgba(255,255,255,0.11)" stroke-width="1.2"/>`;
   });
   TOPO.buses.forEach(b=>{
     const x=px(b),y=py(b),v=vpu?vpu[b-1]:1.0;
-    const col=vpu?vCol(v):'#6366f1';
-    const r=b===1?9:5;
+    const col=vpu?vCol(v):'#6366f1',r=b===1?9:5;
     h+=`<circle cx="${x}" cy="${y}" r="${r}" fill="${col}" stroke="rgba(0,0,0,.5)" stroke-width=".8"/>`;
     if(b===1||b%5===0||[18,22,25,33].includes(b))
-      h+=`<text x="${x}" y="${y-8}" fill="rgba(255,255,255,.75)" font-size="8.5" text-anchor="middle" font-weight="600">${b}</text>`;
+      h+=`<text x="${x}" y="${y-8}" fill="rgba(255,255,255,.8)" font-size="8" text-anchor="middle" font-weight="600">${b}</text>`;
   });
   svg.innerHTML=h;
 }
 
-// ═══════════════════════════════════
-// MAIN RUN
-// ═══════════════════════════════════
-async function run(key,btn){
-  document.querySelectorAll('.sc-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  setSt('Fetching all sections…',true);
-  fp(0);
-
-  const hdr={'Content-Type':'application/json'};
-  const empty='{}';
-
-  fp(1);
-  // Fetch all sections in parallel
-  const [rViz,rS2,rS3,rS4,rS5,rS6,rS9,rS10]=await Promise.all([
-    fetch('/viz/run',{method:'POST',headers:hdr,body:JSON.stringify({scenario_key:key})}).then(r=>r.json()),
-    fetch('/viz/s2',{method:'POST',headers:hdr,body:empty}).then(r=>r.json()),
-    fetch('/viz/s3',{method:'POST',headers:hdr,body:'{"perturb_pct":[0.05,0.10,0.20]}'}).then(r=>r.json()),
-    fetch('/viz/s4',{method:'POST',headers:hdr,body:'{"delta_q_kvar":50}'}).then(r=>r.json()),
-    fetch('/viz/s5',{method:'POST',headers:hdr,body:'{"perturb_pct":0.20}'}).then(r=>r.json()),
-    fetch('/viz/s6',{method:'POST',headers:hdr,body:empty}).then(r=>r.json()),
-    fetch('/viz/s9',{method:'POST',headers:hdr,body:empty}).then(r=>r.json()),
-    fetch('/viz/s10',{method:'POST',headers:hdr,body:empty}).then(r=>r.json()),
-  ]);
-
-  // Scroll to top
-  document.getElementById('main').scrollTo({top:0,behavior:'smooth'});
-
-  fp(2);await sleep(60); renderKPIs(rViz);
-  renderS1(rViz);
-  fp(3);await sleep(60); renderS2(rS2);
-  fp(4);await sleep(60); renderS3(rS3,rViz);
-  renderS4(rS4);
-  fp(5);await sleep(60); renderS5(rS5);
-  fp(6);await sleep(60); renderS6(rS6);
-  fp(7);await sleep(60); renderS9(rS9,rViz);
-  renderRAG(rViz.explanations,rViz,rS3,rS4,rS6);
-  fp(8);await sleep(60); renderS10(rS10);
-  drawTopo(rViz.after?.V_pu);
-
-  setSt(`${rViz.label||key} · scroll down to see all sections`);
+// ── Chat ──────────────────────────────────────────
+function addMsg(text,cls){
+  const el=document.createElement('div');
+  el.className='msg '+cls;el.textContent=text;
+  const msgs=document.getElementById('chat-msgs');
+  msgs.appendChild(el);msgs.scrollTop=msgs.scrollHeight;
+  return el;
+}
+function sendChat(msg){
+  const inp=document.getElementById('chat-in');
+  const txt=msg||inp.value.trim();
+  if(!txt)return;
+  inp.value='';
+  addMsg(txt,'user');
+  const thinking=addMsg('Thinking…','bot thinking');
+  ap(0);setSt('Planning…',true);
+  fetch('/viz/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({message:txt,session_id:'default'})
+  }).then(r=>r.json()).then(async res=>{
+    thinking.remove();
+    if(res.type==='question'){
+      addMsg('❓ '+res.message,'bot ask');setSt('Awaiting clarification');ap(1);
+    }else if(res.type==='explanation'){
+      addMsg('💡 '+res.message,'bot');renderRAG(res.knowledge||[],[]);setSt('Explained');ap(8);
+    }else if(res.type==='analysis'&&res.result){
+      addMsg('✅ '+res.message,'bot');ap(3);await sleep(100);
+      await renderAll(res.result);refreshMemory();
+    }else if(res.type==='comparison'&&res.result){
+      addMsg('⚖️ Comparison ready','bot');renderComparison(res.result);
+      document.getElementById('cmp-card').scrollIntoView({behavior:'smooth'});setSt('Comparison done');ap(8);
+    }else{addMsg(res.message||'Done.','bot');}
+  }).catch(e=>{thinking.remove();addMsg('Error: '+e.message,'bot');setSt('Error');});
 }
 
-// ═══════════════════════════════════
-// KPIs
-// ═══════════════════════════════════
-function renderKPIs(d){
-  if(!d||d.error)return;
-  const b=d.before,a=d.after,dv=d.delta;
-  const set=(id,val,bval,delta,pg,unit)=>{
+// ── Query guide ────────────────────────────────────
+const EXAMPLES=[
+  {qt:'Power Flow',qq:'"Show me the base case"',qr:'Runs S1–S10 on standard IEEE 33-bus loads'},
+  {qt:'DG Injection',qq:'"Add 400kW DG at bus 18"',qr:'GNN predicts switching config to minimize losses'},
+  {qt:'Load Spike',qq:'"Load +80% at bus 25"',qr:'Voltage violation analysis + RAG recommendations'},
+  {qt:'GNN Predict',qq:'"What switching config minimizes losses with heavy load?"',qr:'GraphTransformer switching recommendation'},
+  {qt:'Capacitor',qq:'"Add 600kVAR capacitor at bus 30"',qr:'Reactive compensation impact analysis'},
+  {qt:'Comparison',qq:'"Compare heavy load vs DG at bus 33"',qr:'Select two queries in sidebar → Compare'},
+  {qt:'System Stress',qq:'"Heavy load scenario +30%"',qr:'System-wide stress test, find bottlenecks'},
+  {qt:'Outage',qq:'"Bus 25 outage"',qr:'Islanding risk, zone vulnerability analysis'},
+];
+function buildGuide(){
+  document.getElementById('guide-grid').innerHTML=EXAMPLES.map(e=>`
+    <div class="guide-item" onclick="document.getElementById('chat-in').value='${e.qq.replace(/"/g,'')}';sendChat()">
+      <div class="qt">${e.qt}</div>
+      <div class="qq">${e.qq}</div>
+      <div class="qr">${e.qr}</div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// RENDER ALL
+// ═══════════════════════════════════════════════
+async function renderAll(d){
+  curQid=d.query_id;
+  ap(3);
+  renderKPIs(d.s1);await sleep(20);
+  renderS1(d.s1);await sleep(20);
+  renderS2(d.s2);await sleep(20);
+  renderS5(d.s5);await sleep(20);
+  renderS6(d.s6);await sleep(20);
+  renderS9(d.s9,d.s1);await sleep(20);
+  renderRAG(d.knowledge||[],d.similar_cases||[]);await sleep(20);
+  renderS10(d.s10);
+  drawTopo(d.s1?.after?.V_pu);
+  renderStore(d.query_id,d.label,{
+    timestamp:Date.now()/1000,
+    min_V:d.s1?.after?.min_V,
+    total_losses:d.s1?.after?.totPl,
+  });
+  ap(6);setSt(`${d.label||''} · S3/S4/GNN loading…`,true);
+  document.getElementById('bg-pill').style.display='';
+
+  // Background S3/S4 spinners
+  document.getElementById('s3-wrap').innerHTML='<div class="bg-spin"><div class="sp-dot"></div>S3 propagation loops…</div>';
+  document.getElementById('s4-wrap').innerHTML='<div class="bg-spin"><div class="sp-dot"></div>S4 sensitivity loops…</div>';
+
+  // GNN prediction (async)
+  ap(5);
+  fetch('/viz/gnn_predict',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({scenario_key:d.scenario_key||'base'})
+  }).then(r=>r.json()).then(gnn=>{renderGNN(gnn);}).catch(()=>{
+    document.getElementById('gnn-panel').innerHTML='<div style="color:var(--muted);font-size:11px">GNN prediction unavailable (install torch).</div>';
+  });
+
+  // Poll background
+  if(bgTimer)clearInterval(bgTimer);
+  bgTimer=setInterval(()=>pollBg(d.query_id),2500);
+}
+
+async function pollBg(qid){
+  try{
+    const st=await fetch(`/viz/status/${encodeURIComponent(qid)}`).then(r=>r.json());
+    if(st.status==='done'){
+      clearInterval(bgTimer);bgTimer=null;
+      const bg=await fetch(`/viz/background/${encodeURIComponent(qid)}`).then(r=>r.json());
+      if(bg.ready){
+        ap(4);renderS3(bg.s3);renderS4(bg.s4);
+        if(bg.s6)renderS6(bg.s6,false);
+        if(bg.s9)renderS9(bg.s9,null,false);
+        if(bg.s10)renderS10(bg.s10);
+        document.getElementById('bg-pill').style.display='none';
+        ap(8);setSt('Complete — '+curQid);
+      }
+    }else if(st.status==='error'){
+      clearInterval(bgTimer);bgTimer=null;
+      document.getElementById('s3-wrap').innerHTML='<div style="color:var(--red);padding:12px;font-size:11px">S3 failed.</div>';
+      document.getElementById('s4-wrap').innerHTML='<div style="color:var(--red);padding:12px;font-size:11px">S4 failed.</div>';
+      document.getElementById('bg-pill').style.display='none';
+    }
+  }catch(_){}
+}
+
+// ── KPIs ─────────────────────────────────────────
+function renderKPIs(s1){
+  if(!s1)return;
+  const b=s1.before,a=s1.after,d=s1.delta;
+  const set=(id,val,bval,delta,pg,u='')=>{
     document.getElementById(id).textContent=val;
     document.getElementById(id+'-b').textContent='before: '+bval;
     const el=document.getElementById(id+'-d');
     const good=pg?delta>0:delta<0;
     el.className='kd '+(delta===0?'dz':good?'dp':'dn');
-    el.textContent=(delta>=0?'+':'')+delta.toFixed(unit===''?0:2)+unit;
+    el.textContent=(delta>=0?'+':'')+delta.toFixed(u===''?0:2)+u;
   };
-  set('k-mv',a.min_V.toFixed(4)+' pu',b.min_V.toFixed(4)+' pu',dv.d_min_V,true,'pu');
-  set('k-bv',a.buses_below_095,b.buses_below_095,dv.d_buses_below,false,'');
-  set('k-pl',a.totPl.toFixed(1)+' kW',b.totPl.toFixed(1)+' kW',dv.d_totPl,false,' kW');
-  set('k-ql',a.totQl.toFixed(1)+' kVAR',b.totQl.toFixed(1)+' kVAR',dv.d_totQl,false,' kVAR');
-  set('k-ml',a.max_loading.toFixed(1)+'%',b.max_loading.toFixed(1)+'%',dv.d_max_loading,false,'%');
+  set('k-mv',a.min_V.toFixed(4)+' pu',b.min_V.toFixed(4)+' pu',d.d_min_V,true,' pu');
+  set('k-bv',''+a.buses_below_095,''+b.buses_below_095,d.d_buses_below,false,'');
+  set('k-pl',a.totPl.toFixed(1),b.totPl.toFixed(1),d.d_totPl,false,' kW');
+  set('k-ql',a.totQl.toFixed(1),b.totQl.toFixed(1),d.d_totQl,false,' kVAR');
+  set('k-ml',a.max_loading.toFixed(1)+'%',b.max_loading.toFixed(1)+'%',d.d_max_loading,false,'%');
 }
 
-// ═══════════════════════════════════
-// S1 POWER FLOW
-// ═══════════════════════════════════
-function renderS1(d){
-  if(!d||d.error)return;
-  const b=d.before,a=d.after,dv=d.delta;
-  const buses=BUSES.map(i=>'B'+i);
-  const bl=a.branch_labels||BLABS;
-
-  // Voltage profile before+after
+// ── S1 ───────────────────────────────────────────
+function renderS1(s1){
+  if(!s1)return;
+  const b=s1.before,a=s1.after,d=s1.delta;
+  const buses=BUSES.map(i=>'B'+i),bl=a.branch_labels||BLABS;
   mk('c-vprofile',{type:'line',data:{labels:buses,datasets:[
-    {label:'Before',data:b.V_pu,borderColor:'#6366f1',borderWidth:1.5,pointRadius:2,tension:.3,fill:false},
-    {label:'After', data:a.V_pu,borderColor:'#22c55e',borderWidth:2,  pointRadius:2,tension:.3,fill:false,
+    {label:'Before',data:b.V_pu,borderColor:'#6366f1',borderWidth:1.5,pointRadius:1.5,tension:.3,fill:false},
+    {label:'After', data:a.V_pu,borderColor:'#22c55e',borderWidth:2,pointRadius:1.5,tension:.3,fill:false,
      pointBackgroundColor:a.V_pu.map(v=>vCol(v))},
-  ]},options:{...CD,plugins:{...CD.plugins,title:title('Voltage Profile (pu)')},
+  ]},options:{...CD,plugins:{...CD.plugins,title:ttl('Voltage Profile pu')},
     scales:{...CD.scales,y:{...CD.scales.y,min:0.84,suggestedMax:1.02}}}});
-
-  // ΔV per bus
-  mk('c-dv',{type:'bar',data:{labels:buses,datasets:[{
-    label:'ΔV (pu)',data:dv.dV,borderWidth:0,
-    backgroundColor:dv.dV.map(v=>v>=0?c('after','.75'):c('red','.75'))
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('ΔV per Bus (scenario − base pu)')}}});
-
-  // Branch loading before+after
+  mk('c-dv',{type:'bar',data:{labels:buses,datasets:[{label:'ΔV pu',data:d.dV,borderWidth:0,
+    backgroundColor:d.dV.map(v=>v>=0?c('a','.75'):c('r','.75'))}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('ΔV per Bus (scenario−base)')}}});
   mk('c-loading',{type:'bar',data:{labels:bl,datasets:[
-    {label:'Before',data:b.loading,backgroundColor:c('before','.4'),borderWidth:0},
+    {label:'Before',data:b.loading,backgroundColor:c('b','.4'),borderWidth:0},
     {label:'After', data:a.loading,backgroundColor:a.loading.map(l=>lCol(l)+'aa'),borderWidth:0},
-  ]},options:{...CD,plugins:{...CD.plugins,title:title('Branch Loading % (before vs after)')},
+  ]},options:{...CD,plugins:{...CD.plugins,title:ttl('Branch Loading %')},
     scales:{...CD.scales,y:{...CD.scales.y,max:110}}}});
-
-  // Δ loading
-  mk('c-dload',{type:'bar',data:{labels:bl,datasets:[{
-    label:'Δ Loading %',data:dv.dLoad,borderWidth:0,
-    backgroundColor:dv.dLoad.map(v=>v>=0?c('red','.7'):c('after','.7'))
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Δ Branch Loading % (scenario − base)')}}});
-
-  // P losses before+after
+  mk('c-dload',{type:'bar',data:{labels:bl,datasets:[{label:'Δ Loading %',data:d.dLoad,borderWidth:0,
+    backgroundColor:d.dLoad.map(v=>v>=0?c('r','.7'):c('a','.7'))}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Δ Branch Loading %')}}});
   mk('c-ploss',{type:'bar',data:{labels:bl,datasets:[
-    {label:'P loss before (kW)',data:b.Pl,backgroundColor:c('before','.5'),borderWidth:0},
-    {label:'P loss after (kW)', data:a.Pl,backgroundColor:c('after','.6'),borderWidth:0},
-  ]},options:{...CD,plugins:{...CD.plugins,title:title('Branch P Losses kW (before vs after)')}}});
-
-  // Q losses before+after
+    {label:'P loss before',data:b.Pl,backgroundColor:c('b','.4'),borderWidth:0},
+    {label:'P loss after', data:a.Pl,backgroundColor:c('a','.6'),borderWidth:0},
+  ]},options:{...CD,plugins:{...CD.plugins,title:ttl('P Losses kW')}}});
   mk('c-qloss',{type:'bar',data:{labels:bl,datasets:[
-    {label:'Q loss before (kVAR)',data:b.Ql,backgroundColor:c('purple','.4'),borderWidth:0},
-    {label:'Q loss after (kVAR)', data:a.Ql,backgroundColor:c('teal','.5'),borderWidth:0},
-  ]},options:{...CD,plugins:{...CD.plugins,title:title('Branch Q Losses kVAR (before vs after)')}}});
-
-  // VSI before+after
+    {label:'Q before',data:b.Ql,backgroundColor:c('p','.35'),borderWidth:0},
+    {label:'Q after', data:a.Ql,backgroundColor:c('t','.5'),borderWidth:0},
+  ]},options:{...CD,plugins:{...CD.plugins,title:ttl('Q Losses kVAR')}}});
   mk('c-vsi',{type:'bar',data:{labels:bl,datasets:[
-    {label:'VSI before',data:b.VSI,backgroundColor:c('before','.4'),borderWidth:0},
-    {label:'VSI after', data:a.VSI,backgroundColor:c('red','.55'),borderWidth:0},
-  ]},options:{...CD,plugins:{...CD.plugins,title:title('Voltage Stability Index per Branch (before vs after)')}}});
+    {label:'VSI before',data:b.VSI,backgroundColor:c('b','.4'),borderWidth:0},
+    {label:'VSI after', data:a.VSI,backgroundColor:c('r','.55'),borderWidth:0},
+  ]},options:{...CD,plugins:{...CD.plugins,title:ttl('Voltage Stability Index per Branch')}}});
 }
 
-// ═══════════════════════════════════
-// S2 ELECTRICAL DISTANCE
-// ═══════════════════════════════════
-function renderS2(d){
-  if(!d||d.error)return;
-  const buses=BUSES.map(i=>'B'+i);
-  const cumZ=d.cumulative_Z_ohm,dep=d.feeder_depth_hops,V=d.V_pu;
-
-  mk('c-cumz',{type:'bar',data:{labels:buses,datasets:[{
-    label:'Path |Z| (Ω)',data:cumZ,borderWidth:0,
-    backgroundColor:cumZ.map(v=>{const n=v/Math.max(...cumZ);return `rgba(59,130,246,${.25+.75*n})`})
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Cumulative Path Impedance |Z| from Bus 1 (Ω)')}}});
-
-  mk('c-depth',{type:'bar',data:{labels:buses,datasets:[{
-    label:'Hops',data:dep,borderWidth:0,backgroundColor:c('teal','.55')
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Feeder Depth (hops from substation)')}}});
-
-  mk('c-zv',{type:'scatter',data:{datasets:[{
-    label:'Bus (|Z|, V_pu)',
-    data:cumZ.map((z,i)=>({x:z,y:V[i]})),
-    backgroundColor:V.map(v=>vCol(v)+'bb'),pointRadius:5,
-  }]},options:{...CD,plugins:{...CD.plugins,title:title(`Cumulative |Z| vs V_pu  (r = ${d.summary?.r_Z_Vpu ?? '—'})`)},
-    scales:{...CD.scales,
-      x:{...CD.scales.x,title:{display:true,text:'|Z| (Ω)',color:'#7c8399'}},
-      y:{...CD.scales.y,title:{display:true,text:'V_pu',color:'#7c8399'},min:0.84}}}});
-
-  heatmap('c-edm',d.elec_dist_matrix,'Electrical Distance Matrix');
+// ── S2 ───────────────────────────────────────────
+function renderS2(s2){
+  if(!s2)return;
+  const buses=BUSES.map(i=>'B'+i),cumZ=s2.cumulative_Z_ohm,dep=s2.feeder_depth_hops,V=s2.V_pu;
+  mk('c-cumz',{type:'bar',data:{labels:buses,datasets:[{label:'|Z| Ω',data:cumZ,borderWidth:0,
+    backgroundColor:cumZ.map(v=>{const n=v/Math.max(...cumZ);return `rgba(59,130,246,${.25+.75*n})`})}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Cumulative Path Impedance from Bus 1')}}});
+  mk('c-depth',{type:'bar',data:{labels:buses,datasets:[{label:'Hops',data:dep,borderWidth:0,backgroundColor:c('t','.55')}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Feeder Depth (hops)')}}});
+  mk('c-zv',{type:'scatter',data:{datasets:[{label:`r=${s2.summary?.r_Z_Vpu??'?'}`,
+    data:cumZ.map((z,i)=>({x:z,y:V[i]})),backgroundColor:V.map(v=>vCol(v)+'cc'),pointRadius:4}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('|Z| vs V_pu')},
+      scales:{...CD.scales,x:{...CD.scales.x,title:{display:true,text:'|Z| Ω',color:'#7c8399'}},
+              y:{...CD.scales.y,min:0.84,title:{display:true,text:'V_pu',color:'#7c8399'}}}}});
 }
 
-// ═══════════════════════════════════
-// S3 PROPAGATION
-// ═══════════════════════════════════
-function renderS3(d,viz){
-  if(!d||d.error)return;
-  const buses=BUSES.map(i=>'B'+i);
-  const Vafter=viz?.after?.V_pu||[];
-
-  mk('c-bii',{type:'bar',data:{labels:buses,datasets:[{
-    label:'BII',data:d.BII,borderWidth:0,
-    backgroundColor:d.BII.map(v=>{const n=v/Math.max(...d.BII);return `rgba(239,68,68,${.2+.8*n})`})
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Bus Influence Index (BII) — row sum M20')}}});
-
-  mk('c-vfi',{type:'bar',data:{labels:buses,datasets:[{
-    label:'VFI',data:d.VFI,borderWidth:0,
-    backgroundColor:d.VFI.map(v=>{const n=v/Math.max(...d.VFI);return `rgba(245,158,11,${.2+.8*n})`})
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Voltage Fragility Index (VFI) — col sum M20')}}});
-
-  const prof=d.propagation_profiles_20pct||{};
-  const pcols=['#6366f1','#22c55e','#ef4444','#f59e0b','#14b8a6'];
+// ── S3 (background) ───────────────────────────────
+function renderS3(s3){
+  if(!s3)return;
+  const buses=BUSES.map(i=>'B'+i),pcols=['#6366f1','#22c55e','#ef4444','#f59e0b','#14b8a6'];
+  const prof=s3.propagation_profiles_20pct||{};
+  document.getElementById('s3-wrap').innerHTML=`
+    <div class="g2" style="margin-bottom:12px"><canvas id="c-bii"></canvas><canvas id="c-vfi"></canvas></div>
+    <div style="margin-bottom:12px"><canvas id="c-propprofile"></canvas></div>
+    <canvas id="c-bii-vfi"></canvas>`;
+  mk('c-bii',{type:'bar',data:{labels:buses,datasets:[{label:'BII',data:s3.BII,borderWidth:0,
+    backgroundColor:s3.BII.map(v=>{const n=v/Math.max(...s3.BII);return `rgba(239,68,68,${.2+.8*n})`})}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Bus Influence Index (BII)')}}});
+  mk('c-vfi',{type:'bar',data:{labels:buses,datasets:[{label:'VFI',data:s3.VFI,borderWidth:0,
+    backgroundColor:s3.VFI.map(v=>{const n=v/Math.max(...s3.VFI);return `rgba(245,158,11,${.2+.8*n})`})}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Voltage Fragility Index (VFI)')}}});
   mk('c-propprofile',{type:'line',data:{labels:buses,datasets:Object.entries(prof).map(([k,v],i)=>({
     label:k.replace('bus_','Bus '),data:v.map(x=>x*100),
-    borderColor:pcols[i%5],borderWidth:1.8,pointRadius:1.5,tension:.3,fill:false
-  }))},options:{...CD,plugins:{...CD.plugins,title:title('|ΔV| (%) across all buses — key source buses perturbed +20%')}}});
-
-  mk('c-bii-vfi',{type:'scatter',data:{datasets:[{
-    label:'Buses',
-    data:d.BII.map((b,i)=>({x:b,y:d.VFI[i]})),
-    backgroundColor:d.BII.map((_,i)=>vCol(Vafter[i]||1)+'bb'),pointRadius:5,
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('BII vs VFI (coloured by V_pu after scenario)')},
-    scales:{...CD.scales,x:{...CD.scales.x,title:{display:true,text:'BII',color:'#7c8399'}},
-      y:{...CD.scales.y,title:{display:true,text:'VFI',color:'#7c8399'}}}}});
-
-  const M20=d.influence_matrices?.['0.2'];
-  if(M20)heatmap('c-M20',M20,'Influence Matrix M20');
+    borderColor:pcols[i%5],borderWidth:1.8,pointRadius:1,tension:.3,fill:false
+  }))},options:{...CD,plugins:{...CD.plugins,title:ttl('|ΔV|% when key bus perturbed +20%')}}});
+  mk('c-bii-vfi',{type:'scatter',data:{datasets:[{label:'Buses',
+    data:s3.BII.map((v,i)=>({x:v,y:s3.VFI[i]})),
+    backgroundColor:Array.from({length:N},(_,i)=>vCol(1-i/N*.15)+'bb'),pointRadius:4}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('BII vs VFI')},
+      scales:{...CD.scales,x:{...CD.scales.x,title:{display:true,text:'BII',color:'#7c8399'}},
+              y:{...CD.scales.y,title:{display:true,text:'VFI',color:'#7c8399'}}}}});
 }
 
-// ═══════════════════════════════════
-// S4 REACTIVE SENSITIVITY
-// ═══════════════════════════════════
-function renderS4(d){
-  if(!d||d.error)return;
-  const buses=BUSES.map(i=>'B'+i);
-  const ss=d.self_sensitivity,cs=d.col_sum_sensitivity;
-
-  mk('c-self',{type:'bar',data:{labels:buses,datasets:[{
-    label:'-dV/dQ (pu/kVAR)',data:ss,borderWidth:0,
-    backgroundColor:ss.map(v=>{const n=v/Math.max(...ss);return `rgba(168,85,247,${.2+.8*n})`})
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Self-Sensitivity −dV_i/dQ_i (pu/kVAR)')}}});
-
-  mk('c-colsum',{type:'bar',data:{labels:buses,datasets:[{
-    label:'Σ|dV/dQ|',data:cs,borderWidth:0,
-    backgroundColor:cs.map(v=>{const n=v/Math.max(...cs);return `rgba(236,72,153,${.2+.8*n})`})
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Column-Sum Sensitivity Σ|dV_j/dQ_i| per bus')}}});
-
-  const wr=d.weak_bus_ranking;
-  if(wr){
-    mk('c-weakrank',{type:'bar',data:{
-      labels:wr.bus_numbers.map(b=>'Bus '+b),
-      datasets:[{label:'Self-sensitivity',data:wr.self_sens_values,borderWidth:0,backgroundColor:c('purple','.7')}]
-    },options:{...CD,plugins:{...CD.plugins,title:title('Top 15 Weakest Buses by Reactive Self-Sensitivity')}}});
-  }
-  if(d.dVdQ_matrix)heatmap('c-dvdq',d.dVdQ_matrix,'dV/dQ Matrix');
+// ── S4 (background) ───────────────────────────────
+function renderS4(s4){
+  if(!s4)return;
+  const buses=BUSES.map(i=>'B'+i),ss=s4.self_sensitivity,cs=s4.col_sum_sensitivity;
+  document.getElementById('s4-wrap').innerHTML=`
+    <div class="g2" style="margin-bottom:12px"><canvas id="c-self"></canvas><canvas id="c-colsum"></canvas></div>
+    <canvas id="c-weakrank"></canvas>`;
+  mk('c-self',{type:'bar',data:{labels:buses,datasets:[{label:'-dV/dQ',data:ss,borderWidth:0,
+    backgroundColor:ss.map(v=>{const n=v/Math.max(...ss);return `rgba(168,85,247,${.2+.8*n})`})}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Self-Sensitivity −dV/dQ (pu/kVAR)')}}});
+  mk('c-colsum',{type:'bar',data:{labels:buses,datasets:[{label:'Σ|dV/dQ|',data:cs,borderWidth:0,
+    backgroundColor:cs.map(v=>{const n=v/Math.max(...cs);return `rgba(236,72,153,${.2+.8*n})`})}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Column-Sum Reactive Exposure')}}});
+  const wr=s4.weak_bus_ranking;
+  if(wr)mk('c-weakrank',{type:'bar',data:{labels:wr.bus_numbers.map(b=>'Bus '+b),
+    datasets:[{label:'Self-sensitivity',data:wr.self_sens_values,borderWidth:0,backgroundColor:c('p','.7')}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Top 15 Weakest Buses')}}});
 }
 
-// ═══════════════════════════════════
-// S5 ZONE VULNERABILITY
-// ═══════════════════════════════════
-function renderS5(d){
-  if(!d||d.error)return;
-  const buses=BUSES.map(i=>'B'+i);
+// ── S5 ────────────────────────────────────────────
+function renderS5(s5){
+  if(!s5)return;
   const zcol={near_slack:'#6366f1',mid_feeder:'#f59e0b',far_end:'#ef4444'};
-  const zm=d.zone_mean_dV_pct||{};
-
-  mk('c-zonemean',{type:'line',data:{labels:buses,datasets:Object.entries(zm).map(([z,vals])=>({
-    label:z.replace('_',' '),data:vals,borderColor:zcol[z]||'#fff',
-    borderWidth:2,pointRadius:1.5,tension:.3,fill:false
-  }))},options:{...CD,plugins:{...CD.plugins,title:title('Mean |ΔV| (%) propagation profile per zone')}}});
-
-  const zp=d.zone_peak_amplification||{};
+  const zv=s5.zone_voltages||{},zb=s5.zone_buses||{};
   const allB=[],allV=[],allC=[];
-  Object.entries(zp).forEach(([z,bmap])=>Object.entries(bmap).forEach(([b,v])=>{
-    allB.push('B'+b);allV.push(v);allC.push(zcol[z]||'#fff');
-  }));
-  mk('c-zonepeak',{type:'bar',data:{labels:allB,datasets:[{
-    label:'Peak |ΔV| (%)',data:allV,borderWidth:0,backgroundColor:allC
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Peak |ΔV| (%) per source bus — coloured by zone')}}});
-
-  const v18=d.v18_degradation_by_pct||{};
-  const mfb=d.main_feeder_buses||[];
-  mk('c-v18deg',{type:'line',data:{labels:mfb.map(b=>'B'+b),datasets:Object.entries(v18).map(([pct,vals],i)=>({
-    label:`+${Math.round(pct*100)}%`,data:vals,
-    borderColor:[c('after','1'),c('amber','1'),c('red','1')][i]||'#fff',
-    borderWidth:1.8,pointRadius:2,tension:.3,fill:false
-  }))},options:{...CD,plugins:{...CD.plugins,title:title('V@Bus18 as disturbance location varies — 3 perturbation levels')},
-    scales:{...CD.scales,y:{...CD.scales.y,min:0.84}}}});
-
-  const att=d.attenuation_vs_distance||{};
-  mk('c-atten',{type:'scatter',data:{datasets:Object.entries(att).map(([k,v],i)=>({
-    label:k.replace('_',' '),
-    data:v.cumZ.map((z,j)=>({x:z,y:v.dV_pct[j]*100})),
-    backgroundColor:[c('after','.7'),c('amber','.7'),c('red','.7')][i]||c('blue','.7'),pointRadius:3,
-  }))},options:{...CD,plugins:{...CD.plugins,title:title('|ΔV| (%) vs Electrical Distance Ω — 3 source buses')},
-    scales:{...CD.scales,x:{...CD.scales.x,title:{display:true,text:'Cumulative |Z| (Ω)',color:'#7c8399'}},
-      y:{...CD.scales.y,title:{display:true,text:'|ΔV| (%)',color:'#7c8399'}}}}});
+  Object.entries(zv).forEach(([z,vs])=>{
+    (zb[z]||[]).forEach((b,i)=>{allB.push('B'+b);allV.push(vs[i]);allC.push(zcol[z]||'#fff')});
+  });
+  mk('c-zone-v',{type:'bar',data:{labels:allB,datasets:[{label:'V_pu',data:allV,backgroundColor:allC,borderWidth:0}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Zone Bus Voltages pu')},
+      scales:{...CD.scales,y:{...CD.scales.y,min:0.84,max:1.02}}}});
+  const fe=s5.feeder_end_buses||{};
+  mk('c-feeder-end',{type:'bar',data:{labels:Object.keys(fe).map(b=>'Bus '+b),
+    datasets:[{label:'V_pu',data:Object.values(fe).map(v=>v.V_pu),
+      backgroundColor:Object.values(fe).map(v=>vCol(v.V_pu)+'cc'),borderWidth:0}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Feeder-End Bus Voltages')},
+      scales:{...CD.scales,y:{...CD.scales.y,min:0.84,max:1.02}}}});
+  const att=s5.attenuation_proxy||{};
+  mk('c-att',{type:'scatter',data:{datasets:[{label:'Buses (|Z|, V_pu)',
+    data:Object.values(att).map(v=>({x:v.cumZ,y:v.V_pu})),
+    backgroundColor:Object.values(att).map(v=>vCol(v.V_pu)+'cc'),pointRadius:5}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('V_pu vs Electrical Distance (attenuation)')},
+      scales:{...CD.scales,x:{...CD.scales.x,title:{display:true,text:'|Z| Ω',color:'#7c8399'}},
+              y:{...CD.scales.y,min:0.84,title:{display:true,text:'V_pu',color:'#7c8399'}}}}});
 }
 
-// ═══════════════════════════════════
-// S6 INDICES
-// ═══════════════════════════════════
-function renderS6(d){
-  if(!d||d.error)return;
+// ── S6 ────────────────────────────────────────────
+function renderS6(s6,showProxy=true){
+  if(!s6)return;
   const buses=BUSES.map(i=>'B'+i);
-
-  mk('c-eci',{type:'bar',data:{labels:buses,datasets:[{
-    label:'ECI',data:d.ECI,borderWidth:0,
-    backgroundColor:d.ECI.map(v=>{const n=v/Math.max(...d.ECI);return `rgba(99,102,241,${.2+.8*n})`})
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Electrical Centrality Index (ECI)')}}});
-
-  mk('c-instab',{type:'bar',data:{labels:buses,datasets:[{
-    label:'Instability',data:d.instability,borderWidth:0,
-    backgroundColor:d.instability.map(v=>`rgba(239,68,68,${.15+.85*v})`)
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Instability Score — norm(VFI + self_dVdQ + V_drop)')}}});
-
-  const DPFclean=d.DPF.map(v=>isFinite(v)?Math.min(v,500):0);
-  mk('c-dpf',{type:'bar',data:{labels:buses,datasets:[{
-    label:'DPF',data:DPFclean,borderWidth:0,
-    backgroundColor:DPFclean.map(v=>{const n=v/Math.max(...DPFclean)||0;return `rgba(20,184,166,${.2+.8*n})`})
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Disturbance Propagation Factor (DPF)')}}});
-
+  if(showProxy)document.getElementById('s6-proxy').textContent=s6.is_proxy?'(proxy — S3 pending)':'';
+  mk('c-eci',{type:'bar',data:{labels:buses,datasets:[{label:'ECI',data:s6.ECI,borderWidth:0,
+    backgroundColor:s6.ECI.map(v=>{const n=v/Math.max(...s6.ECI);return `rgba(99,102,241,${.2+.8*n})`})}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Electrical Centrality Index (ECI)')}}});
+  mk('c-instab',{type:'bar',data:{labels:buses,datasets:[{label:'Instability',data:s6.instability,borderWidth:0,
+    backgroundColor:s6.instability.map(v=>`rgba(239,68,68,${.15+.85*v})`)}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Instability Score')}}});
+  const DPF=s6.DPF.map(v=>isFinite(v)?Math.min(v,200):0);
+  mk('c-dpf',{type:'bar',data:{labels:buses,datasets:[{label:'DPF',data:DPF,borderWidth:0,
+    backgroundColor:DPF.map(v=>{const n=v/Math.max(...DPF)||0;return `rgba(20,184,166,${.2+.8*n})`})}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Disturbance Propagation Factor (DPF)')}}});
   mk('c-multi',{type:'line',data:{labels:buses,datasets:[
-    {label:'BII (norm)',data:norm(d.BII),borderColor:'#ef4444',borderWidth:1.5,pointRadius:1,tension:.3,fill:false},
-    {label:'VFI (norm)',data:norm(d.VFI),borderColor:'#f59e0b',borderWidth:1.5,pointRadius:1,tension:.3,fill:false},
-    {label:'ECI (norm)',data:norm(d.ECI),borderColor:'#6366f1',borderWidth:2,  pointRadius:1,tension:.3,fill:false},
-    {label:'Instability',data:d.instability,borderColor:'#ec4899',borderWidth:1.5,pointRadius:1,tension:.3,fill:false},
-  ]},options:{...CD,plugins:{...CD.plugins,title:title('Normalised Multi-Index Overlay — BII · VFI · ECI · Instability')},
+    {label:'BII(n)',data:norm(s6.BII),borderColor:'#ef4444',borderWidth:1.5,pointRadius:0,tension:.3,fill:false},
+    {label:'VFI(n)',data:norm(s6.VFI),borderColor:'#f59e0b',borderWidth:1.5,pointRadius:0,tension:.3,fill:false},
+    {label:'ECI(n)',data:norm(s6.ECI),borderColor:'#6366f1',borderWidth:2,  pointRadius:0,tension:.3,fill:false},
+    {label:'Instab',data:s6.instability,borderColor:'#ec4899',borderWidth:1.5,pointRadius:0,tension:.3,fill:false},
+  ]},options:{...CD,plugins:{...CD.plugins,title:ttl('Normalised Multi-Index Overlay')},
     scales:{...CD.scales,y:{...CD.scales.y,min:0,max:1}}}});
-
-  const t=d.top10_by_ECI;
+  const t=s6.top10_by_ECI;
   if(t){
-    const maxBII=Math.max(...t.BII),maxVFI=Math.max(...t.VFI);
-    document.getElementById('s6-table').innerHTML=`
-      <table class="tbl"><thead><tr>
-        <th>Bus</th><th>ECI</th><th>BII</th><th>VFI</th><th>Instability</th><th>V_pu</th>
-      </tr></thead><tbody>
-      ${t.bus_numbers.map((b,i)=>`<tr>
-        <td><b>Bus ${b}</b></td>
-        <td>${t.ECI[i].toFixed(4)}</td>
-        <td><span class="ibar" style="width:${t.BII[i]/maxBII*60}px;background:#ef4444;display:inline-block;height:5px;border-radius:2px;vertical-align:middle"></span> ${t.BII[i].toFixed(4)}</td>
-        <td><span class="ibar" style="width:${t.VFI[i]/maxVFI*60}px;background:#f59e0b;display:inline-block;height:5px;border-radius:2px;vertical-align:middle"></span> ${t.VFI[i].toFixed(4)}</td>
-        <td><span class="ibar" style="width:${t.instability[i]*60}px;background:#ec4899;display:inline-block;height:5px;border-radius:2px;vertical-align:middle"></span> ${t.instability[i].toFixed(3)}</td>
-        <td style="color:${vCol(t.V_pu[i])};font-weight:600">${t.V_pu[i].toFixed(4)}</td>
-      </tr>`).join('')}
-      </tbody></table>`;
+    const mB=Math.max(...t.BII),mV=Math.max(...t.VFI);
+    document.getElementById('s6-table').innerHTML=`<table class="tbl"><thead><tr>
+      <th>Bus</th><th>ECI</th><th>BII</th><th>VFI</th><th>Instability</th><th>V_pu</th>
+    </tr></thead><tbody>${t.bus_numbers.map((b,i)=>`<tr>
+      <td><b>Bus ${b}</b></td><td>${t.ECI[i].toFixed(4)}</td>
+      <td><span class="ibar" style="width:${t.BII[i]/mB*55}px;background:#ef4444;display:inline-block;height:4px;border-radius:2px;vertical-align:middle"></span>${t.BII[i].toFixed(4)}</td>
+      <td><span class="ibar" style="width:${t.VFI[i]/mV*55}px;background:#f59e0b;display:inline-block;height:4px;border-radius:2px;vertical-align:middle"></span>${t.VFI[i].toFixed(4)}</td>
+      <td><span class="ibar" style="width:${t.instability[i]*55}px;background:#ec4899;display:inline-block;height:4px;border-radius:2px;vertical-align:middle"></span>${t.instability[i].toFixed(3)}</td>
+      <td style="color:${vCol(t.V_pu[i])};font-weight:600">${t.V_pu[i].toFixed(4)}</td>
+    </tr>`).join('')}</tbody></table>`;
   }
 }
 
-// ═══════════════════════════════════
-// S9 COMPOSITE
-// ═══════════════════════════════════
-function renderS9(d,viz){
-  if(!d||d.error)return;
-  const buses=BUSES.map(i=>'B'+i);
-  const bl=viz?.after?.branch_labels||BLABS;
+// ── GNN ───────────────────────────────────────────
+function renderGNN(gnn){
+  if(!gnn)return;
+  const p=gnn.gnn_prediction,sw=gnn.switching_recommendation;
+  if(!p)return;
+  const pred=p.predicted,act=p.actual,dlt=p.delta;
+  document.getElementById('gnn-vl').textContent=`val_loss=${p.best_val_loss?.toFixed(6)||'?'} · ${p.matched_weights||'?'} weights`;
+  const dCls=(v,good)=>v===0?'dz':good?'dp':'dn';
 
-  mk('c-risk',{type:'bar',data:{labels:buses,datasets:[{
-    label:'Risk',data:d.composite_risk_score,borderWidth:0,
-    backgroundColor:d.composite_risk_score.map(v=>`rgba(239,68,68,${.15+.85*v})`)
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Composite Risk Score per Bus (normalised 0–1)')}}});
+  document.getElementById('gnn-panel').innerHTML=`
+    <div class="gnn-pred">
+      <div class="gnn-kpi">
+        <div class="gl">Predicted P Loss</div>
+        <div class="gv" style="color:var(--purple)">${pred.totPl_kW} kW</div>
+        <div class="gs">actual: ${act.totPl_kW} kW</div>
+        <div class="gd ${dCls(dlt.totPl_kW,false)}">Δ ${dlt.totPl_kW>=0?'+':''}${dlt.totPl_kW} kW</div>
+      </div>
+      <div class="gnn-kpi">
+        <div class="gl">Predicted Min V</div>
+        <div class="gv" style="color:${vCol(pred.min_V_pu)}">${pred.min_V_pu} pu</div>
+        <div class="gs">actual: ${act.min_V_pu} pu</div>
+        <div class="gd ${dCls(dlt.min_V_pu,true)}">${dlt.min_V_pu>=0?'+':''}${dlt.min_V_pu} pu</div>
+      </div>
+      <div class="gnn-kpi">
+        <div class="gl">Predicted Max Load</div>
+        <div class="gv" style="color:${lCol(pred.max_loading_pct)}">${pred.max_loading_pct}%</div>
+        <div class="gs">actual: ${act.max_loading_pct}%</div>
+        <div class="gd ${dCls(dlt.max_loading_pct,false)}">${dlt.max_loading_pct>=0?'+':''}${dlt.max_loading_pct}%</div>
+      </div>
+    </div>
+    ${sw?.recommendations?.length?`
+    <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;
+      letter-spacing:.06em;margin-bottom:8px">🔀 Switching Recommendations (ranked by GNN score)</div>
+    <table class="sw-table"><thead><tr>
+      <th>Rank</th><th>Switch</th><th>Pred Loss</th><th>Pred Min V</th>
+      <th>Loss Reduction</th><th>Score</th>
+    </tr></thead><tbody>
+    ${sw.recommendations.map((r,i)=>`<tr>
+      <td><span class="sw-rank">#${i+1}</span></td>
+      <td><span class="sw-badge">${r.switch_id}</span> Bus ${r.from_bus}–${r.to_bus}</td>
+      <td>${r.predicted_totPl_kW} kW</td>
+      <td style="color:${vCol(r.predicted_min_V_pu)}">${r.predicted_min_V_pu}</td>
+      <td class="${r.loss_reduction_kW>0?'dp':'dn'}">${r.loss_reduction_kW>0?'−':''}${Math.abs(r.loss_reduction_kW)} kW</td>
+      <td><span class="score-bar" style="width:${Math.max(0,r.score/sw.recommendations[0].score*50)}px"></span>${r.score.toFixed(3)}</td>
+    </tr>`).join('')}
+    </tbody></table>
+    <div style="font-size:9.5px;color:var(--muted);margin-top:6px">⚠ ${sw.note||''}</div>`:''}`;
+}
 
-  const imp=d.mean_voltage_impact_pct||{};
-  mk('c-impact',{type:'line',data:{labels:buses,datasets:Object.entries(imp).map(([pct,vals],i)=>({
-    label:`+${Math.round(pct*100)}% perturb`,data:vals,
-    borderColor:[c('after','1'),c('amber','1'),c('red','1')][i]||'#fff',
-    borderWidth:1.8,pointRadius:1.5,tension:.3,fill:false
-  }))},options:{...CD,plugins:{...CD.plugins,title:title('Mean |ΔV| (%) at 3 perturbation levels across all buses')}}});
-
-  const t5=d.top5_multi_index_profile;
+// ── S9 ────────────────────────────────────────────
+function renderS9(s9,s1){
+  if(!s9)return;
+  const bl=(s1?.after?.branch_labels)||BLABS;
+  mk('c-risk',{type:'bar',data:{labels:BUSES.map(i=>'B'+i),datasets:[{label:'Risk',data:s9.composite_risk_score,borderWidth:0,
+    backgroundColor:s9.composite_risk_score.map(v=>`rgba(239,68,68,${.15+.85*v})`)}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Composite Risk Score')}}});
+  const t5=s9.top5_multi_index_profile;
   if(t5){
     const rcols=['#6366f1','#22c55e','#ef4444','#f59e0b','#14b8a6'];
     mk('c-radar',{type:'radar',data:{labels:t5.metric_labels,datasets:Object.entries(t5.profiles).map(([bus,vals],i)=>({
-      label:bus.replace('_',' '),data:vals,
-      borderColor:rcols[i%5],backgroundColor:rcols[i%5].replace(')',',0.08)'),
-      borderWidth:2,pointRadius:3,
-    }))},options:{plugins:{legend:{labels:{color:'#7c8399',font:{size:10}}}},
-      scales:{r:{ticks:{color:'#7c8399',font:{size:8},backdropColor:'transparent'},
-        grid:{color:'rgba(255,255,255,0.07)'},pointLabels:{color:'#7c8399',font:{size:10}},min:0,max:1}}}});
+      label:bus.replace('_',' '),data:vals,borderColor:rcols[i%5],
+      backgroundColor:rcols[i%5].replace(')',',0.07)'),borderWidth:1.8,pointRadius:2,
+    }))},options:{plugins:{legend:{labels:{color:'#7c8399',font:{size:9}}}},
+      scales:{r:{ticks:{color:'#7c8399',font:{size:7.5},backdropColor:'transparent'},
+        grid:{color:'rgba(255,255,255,0.07)'},pointLabels:{color:'#7c8399',font:{size:9}},min:0,max:1}}}});
   }
-
-  mk('c-vsi9',{type:'bar',data:{labels:bl,datasets:[{
-    label:'VSI',data:d.VSI_per_branch,borderWidth:0,
-    backgroundColor:d.VSI_per_branch.map(v=>{const n=Math.min(v/Math.max(...d.VSI_per_branch),1);return `rgba(168,85,247,${.2+.8*n})`})
-  }]},options:{...CD,plugins:{...CD.plugins,title:title('Voltage Stability Index per Branch')}}});
+  mk('c-vsi9',{type:'bar',data:{labels:bl,datasets:[{label:'VSI',data:s9.VSI_per_branch,borderWidth:0,
+    backgroundColor:s9.VSI_per_branch.map(v=>{const n=Math.min(v/Math.max(...s9.VSI_per_branch),1);
+      return `rgba(168,85,247,${.2+.8*n})`})}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('VSI per Branch')}}});
 }
 
-// ═══════════════════════════════════
-// RAG — enriched with more components
-// ═══════════════════════════════════
-function renderRAG(entries,viz,s3,s4,s6){
+// ── RAG ───────────────────────────────────────────
+function renderRAG(knowledge,similar){
   const panel=document.getElementById('rag-panel');
   const cards=[];
-
-  // From API explanations
-  if(entries&&entries.length){
-    entries.forEach(e=>{
-      cards.push(`<div class="rag-card r${e.severity[0]}">
-        <div class="rt">⚠ ${e.title}</div>
-        <div class="rx">${e.explanation}</div>
-        <div class="rc">📍 In this scenario: ${e.context||''}</div>
-        <div class="rr">💡 ${e.recommendation}</div>
-      </div>`);
-    });
-  }
-
-  // Extra RAG: worst BII bus interpretation
-  if(s3&&!s3.error&&s3.summary){
-    const bus=s3.summary.most_influential_bus_BII;
-    const bii=(s3.BII[bus-1]||0).toFixed(4);
-    cards.push(`<div class="rag-card rl">
-      <div class="rt">📡 Disturbance Source — Bus ${bus}</div>
-      <div class="rx">Bus ${bus} has the highest Bus Influence Index (BII = ${bii}), meaning a +20% load increase there propagates the most voltage deviation across the network. In radial feeders, buses near branching junctions typically have high BII.</div>
-      <div class="rc">📍 Top 5 influential buses: ${s3.summary.top5_BII_buses.map(b=>'Bus '+b).join(', ')}</div>
-      <div class="rr">💡 Install load forecasting sensors or DG units at Bus ${bus} to dampen disturbance propagation.</div>
+  knowledge.forEach(k=>{
+    const sev=k.severity||'medium',scls=sev==='high'?'rh':sev==='low'?'rl':'rm';
+    cards.push(`<div class="rc_ ${scls}">
+      <div class="rtl">📚 ${(k.topic||'').toUpperCase()} <small style="font-weight:400;opacity:.7">(${(k.relevance*100).toFixed(0)}% relevant)</small></div>
+      <div class="rx">${k.text}</div>
     </div>`);
-  }
-
-  // Extra RAG: most fragile bus VFI
-  if(s3&&!s3.error&&s3.summary){
-    const bus=s3.summary.most_fragile_bus_VFI;
-    const vfi=(s3.VFI[bus-1]||0).toFixed(4);
-    cards.push(`<div class="rag-card rm">
-      <div class="rt">🔴 Most Fragile Bus — Bus ${bus}</div>
-      <div class="rx">Bus ${bus} has the highest Voltage Fragility Index (VFI = ${vfi}), meaning it receives the most voltage perturbation from disturbances anywhere in the network. Feeder-end buses are typically most fragile due to accumulated impedance.</div>
-      <div class="rc">📍 Top 5 fragile buses: ${s3.summary.top5_VFI_buses.map(b=>'Bus '+b).join(', ')}</div>
-      <div class="rr">💡 Deploy a capacitor bank or voltage regulator near Bus ${bus} to stiffen the bus voltage against incoming disturbances.</div>
+  });
+  similar.forEach(s=>{
+    if(!s.explanation)return;
+    cards.push(`<div class="rc_ rl">
+      <div class="rtl">🔍 Similar Case <small style="font-weight:400;opacity:.7">(${(s.similarity*100).toFixed(0)}% match)</small></div>
+      <div class="rx">${s.label||s.scenario_key}</div>
+      <div class="rctx">${s.explanation}</div>
     </div>`);
-  }
-
-  // Extra RAG: weakest reactive bus
-  if(s4&&!s4.error&&s4.summary){
-    const bus=s4.summary.most_sensitive_bus;
-    const ss=s4.summary.max_self_sens_pu_per_kvar;
-    cards.push(`<div class="rag-card rh">
-      <div class="rt">⚡ Reactive Weak Point — Bus ${bus}</div>
-      <div class="rx">Bus ${bus} has the highest reactive self-sensitivity (−dV/dQ = ${ss} pu/kVAR). This means every kVAR of reactive load added at Bus ${bus} drops its voltage by ${ss} pu — far more than any other bus. This indicates very weak reactive power support at this location.</div>
-      <div class="rc">📍 Top 5 reactive-weak buses: ${s4.summary.top5_weak_buses.map(b=>'Bus '+b).join(', ')}</div>
-      <div class="rr">💡 A shunt capacitor bank of 300–600 kVAR at Bus ${bus} would dramatically improve voltage stability at this node. Consider also a static VAR compensator (SVC) for dynamic loads.</div>
-    </div>`);
-  }
-
-  // Extra RAG: highest ECI bus
-  if(s6&&!s6.error&&s6.summary){
-    const top=s6.summary.top5_ECI;
-    const topInstab=s6.summary.top5_instability;
-    cards.push(`<div class="rag-card rm">
-      <div class="rt">🏆 Highest Electrical Centrality — Bus ${top[0]}</div>
-      <div class="rx">Bus ${top[0]} scores highest on the Electrical Centrality Index (ECI), combining closeness centrality, inverse electrical distance, BII, and VFI. This bus plays a central role in both the graph topology and the electrical power transfer of the network.</div>
-      <div class="rc">📍 Top 5 ECI buses: ${top.map(b=>'Bus '+b).join(', ')} · Top instability: ${topInstab.map(b=>'Bus '+b).join(', ')}</div>
-      <div class="rr">💡 Bus ${top[0]} should be prioritised for protection upgrades, smart sensor deployment, and as a candidate for tie-switch connection points in network reconfiguration.</div>
-    </div>`);
-  }
-
-  // Extra RAG: loss analysis
-  if(viz&&viz.after){
-    const pct=(viz.after.totPl/3655*100).toFixed(1);
-    const d=viz.delta?.d_totPl||0;
-    cards.push(`<div class="rag-card rl">
-      <div class="rt">📊 System Loss Analysis</div>
-      <div class="rx">Total real power losses are ${viz.after.totPl.toFixed(1)} kW (${pct}% of the 3655 kW base load). The IEEE 33-bus system has a base loss of ~245 kW (6.7%). Loss change from base: ${d>=0?'+':''}${d.toFixed(1)} kW.</div>
-      <div class="rc">📍 Losses are dominated by high-resistance branches (br 7-8, 8-9, 12-13) carrying heavy current.</div>
-      <div class="rr">💡 Feeder reconfiguration by closing tie switches can reduce I²R losses by 10–30%. The classical optimal reconfiguration of IEEE 33-bus reduces losses to ~139 kW by closing ties 7-20, 8-14, 11-21, 17-32, 24-28.</div>
-    </div>`);
-  }
-
-  if(cards.length===0){
-    panel.innerHTML='<div style="color:var(--muted)">No explanations available.</div>';
-    return;
-  }
+  });
+  if(!cards.length){panel.innerHTML='<div style="color:var(--muted);font-size:12px">No RAG results yet.</div>';return;}
   panel.innerHTML=`<div class="rag-grid">${cards.join('')}</div>`;
 }
 
-// ═══════════════════════════════════
-// S10 INSIGHTS
-// ═══════════════════════════════════
-function renderS10(d){
-  if(!d||d.error)return;
-  const f=d.findings;
-  const fmt=arr=>arr.map(b=>`Bus ${b}`).join(', ');
-  const s=f['10_system_summary'];
+// ── Comparison ────────────────────────────────────
+function renderComparison(d){
+  const card=document.getElementById('cmp-card');
+  card.style.display='';
+  document.getElementById('cmp-ta').textContent='A: '+d.label_a;
+  document.getElementById('cmp-tb').textContent='B: '+d.label_b;
+  const dt=d.delta,s=dt.summary;
+  const buses=BUSES.map(i=>'B'+i),bl=BLABS;
 
-  document.getElementById('s10-kpis').innerHTML=`
-    <div class="kpi"><div class="kl">P Loss</div><div class="kv">${s.P_loss_kw} kW</div><div class="ks">${s.P_loss_pct}% of total load</div></div>
-    <div class="kpi"><div class="kl">Min Voltage</div><div class="kv" style="color:${vCol(s.min_V_pu)}">${s.min_V_pu}</div><div class="ks">Bus ${s.min_V_bus}</div></div>
-    <div class="kpi"><div class="kl">Buses &lt; 0.95</div><div class="kv" style="color:${s.buses_below_095>0?'var(--red)':'var(--green)'}">${s.buses_below_095}</div><div class="ks">${s.buses_below_090} below 0.90 pu</div></div>
-    <div class="kpi"><div class="kl">Max Loading</div><div class="kv" style="color:${lCol(s.max_loading_pct)}">${s.max_loading_pct}%</div><div class="ks">worst branch</div></div>`;
+  document.getElementById('cmp-kpis').innerHTML=`
+    <div class="cmp-kpi"><div class="ck">Min Voltage</div><div class="cv">
+      <span class="ca-clr">${s.A_min_V} pu</span><span class="cb-clr">${s.B_min_V} pu</span></div></div>
+    <div class="cmp-kpi"><div class="ck">P Losses</div><div class="cv">
+      <span class="ca-clr">${s.A_losses} kW</span><span class="cb-clr">${s.B_losses} kW</span></div></div>
+    <div class="cmp-kpi"><div class="ck">Max Loading</div><div class="cv">
+      <span class="ca-clr">${s.A_max_load}%</span><span class="cb-clr">${s.B_max_load}%</span></div></div>`;
 
-  document.getElementById('s10-findings').innerHTML=[
-    {k:'Weakest buses (V_pu)',v:fmt(f['1_weakest_buses'])},
-    {k:'Most influential (BII)',v:fmt(f['2_most_influential_BII'])},
-    {k:'Most reactive-sensitive',v:fmt(f['3_most_reactive_sensitive'])},
-    {k:'Highest ECI',v:fmt(f['4_highest_ECI'])},
-    {k:'Fiedler λ₂ (algebraic connectivity)',v:`${f['5_fiedler_lambda2']} — ${f['5_topology_fragility']}`},
-    {k:'r(|Z|, V_pu)',v:f['6_r_Z_Vpu']},
-    {k:'r(|Z|, BII)',v:f['6_r_Z_BII']},
-    {k:'r(betweenness, ECI)',v:f['7_r_betweenness_ECI']},
-    {k:'Worst VSI branches',v:f['8_worst_VSI_branches']?.join(', ')},
-    {k:'Feeder-end buses',v:Object.entries(f['9_feeder_end_buses']||{}).map(([b,v])=>`Bus ${b}: ${v.V_pu} pu`).join(' · ')},
-  ].map(({k,v})=>`<div class="finding"><div class="fk">${k}</div><div class="fv">${v}</div></div>`).join('');
+  mk('c-cmp-v',{type:'line',data:{labels:buses,datasets:[
+    {label:'A: '+d.label_a,data:dt.V_a,borderColor:'#22c55e',borderWidth:2,pointRadius:1,tension:.3,fill:false},
+    {label:'B: '+d.label_b,data:dt.V_b,borderColor:'#f59e0b',borderWidth:2,pointRadius:1,tension:.3,fill:false},
+  ]},options:{...CD,plugins:{...CD.plugins,title:ttl('Voltage Profile A vs B')},
+    scales:{...CD.scales,y:{...CD.scales.y,min:0.84}}}});
+
+  mk('c-cmp-dv',{type:'bar',data:{labels:buses,datasets:[{label:'ΔV A−B',data:dt.dV_AvsB,borderWidth:0,
+    backgroundColor:dt.dV_AvsB.map(v=>v>=0?c('a','.7'):c('am','.7'))}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('ΔV A minus B')}}});
+
+  mk('c-cmp-load',{type:'bar',data:{labels:bl,datasets:[
+    {label:'A: '+d.label_a,data:dt.loading_a,backgroundColor:c('a','.5'),borderWidth:0},
+    {label:'B: '+d.label_b,data:dt.loading_b,backgroundColor:c('am','.5'),borderWidth:0},
+  ]},options:{...CD,plugins:{...CD.plugins,title:ttl('Branch Loading A vs B')},
+    scales:{...CD.scales,y:{...CD.scales.y,max:110}}}});
+
+  mk('c-cmp-pl',{type:'bar',data:{labels:bl,datasets:[{label:'Δ Loading A−B',data:dt.dLoad_AvsB,borderWidth:0,
+    backgroundColor:dt.dLoad_AvsB.map(v=>v>=0?c('r','.65'):c('a','.65'))}]},
+    options:{...CD,plugins:{...CD.plugins,title:ttl('Δ Branch Loading A−B')}}});
 }
 
-// ═══════════════════════════════════
+// ── S10 ───────────────────────────────────────────
+function renderS10(s10){
+  if(!s10)return;
+  const f=s10.findings,s=f['10_system_summary'];
+  const fmt=arr=>arr.map(b=>'Bus '+b).join(', ');
+  document.getElementById('s10-kpis').innerHTML=`
+    <div class="kpi"><div class="kl">P Loss</div><div class="kv">${s.P_loss_kw}kW</div><div class="ks">${s.P_loss_pct}% of load</div></div>
+    <div class="kpi"><div class="kl">Min Voltage</div><div class="kv" style="color:${vCol(s.min_V_pu)}">${s.min_V_pu}</div><div class="ks">Bus ${s.min_V_bus}</div></div>
+    <div class="kpi"><div class="kl">Below 0.95</div><div class="kv" style="color:${s.buses_below_095>0?'var(--red)':'var(--green)'}">${s.buses_below_095}</div><div class="ks">${s.buses_below_090} below 0.90</div></div>
+    <div class="kpi"><div class="kl">Max Loading</div><div class="kv" style="color:${lCol(s.max_loading_pct)}">${s.max_loading_pct}%</div><div class="ks">branch peak</div></div>`;
+  document.getElementById('s10-findings').innerHTML=[
+    {k:'Weakest buses',v:fmt(f['1_weakest_buses'])},
+    {k:'Most influential (BII)',v:fmt(f['2_most_influential_BII'])},
+    {k:'Highest ECI',v:fmt(f['4_highest_ECI'])},
+    {k:'Fiedler λ₂',v:`${f['5_fiedler_lambda2']} — ${f['5_topology_fragility']}`},
+    {k:'r(|Z|, V_pu)',v:`${f['6_r_Z_Vpu']}`},
+    {k:'r(|Z|, BII)',v:`${f['6_r_Z_BII']}`},
+    {k:'Worst VSI branches',v:f['8_worst_VSI_branches']?.join(', ')},
+    {k:'Feeder-end V_pu',v:Object.entries(f['9_feeder_end_buses']||{}).map(([b,v])=>`Bus ${b}: ${v.V_pu}pu`).join(' · ')},
+  ].map(({k,v})=>`<div class="fi"><div class="fk">${k}</div><div class="fv">${v}</div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
 // INIT
-// ═══════════════════════════════════
+// ═══════════════════════════════════════════════
 (async()=>{
-  await Promise.all([loadScenarios(),loadTopo()]);
-  // auto-run base
-  const first=document.querySelector('.sc-btn');
-  if(first)first.click();
+  buildGuide();
+  await Promise.all([loadTopo(), refreshMemory()]);
+  addMsg('👋 Hi! I\'m DNR Copilot. Type a query or click an example below. I use a GraphTransformer GNN to predict optimal switching configurations.','bot');
 })();
 </script>
 </body>

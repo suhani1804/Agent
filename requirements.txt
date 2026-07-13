@@ -1,27 +1,32 @@
-# DNR Copilot – Python 3.12
-# Core orchestration
+# Orchestration
 langgraph>=0.2.0
 langchain-openai>=0.1.0
 langchain-core>=0.2.0
 
-# MCP servers
+# MCP
 fastmcp>=0.4.0
 pydantic>=2.0.0
 
-# API gateway
+# API
 fastapi>=0.111.0
 uvicorn[standard]>=0.30.0
-
-# HTTP client (used in MCP clients)
 httpx>=0.27.0
-
-# Retry logic
 tenacity>=8.3.0
 
-# Testing
-pytest>=8.0.0
-pytest-asyncio>=0.23.0
+# Power flow
+pandapower>=2.13.0
+numpy>=1.24.0
+pandas>=2.0.0
+networkx>=3.0
+scipy>=1.10.0
+numba>=0.59.0
 
-# Optional: structured logging
-structlog>=24.0.0
+# Memory
+redis>=5.0.0
+chromadb>=0.5.0
+sentence-transformers>=3.0.0
+
+# LLM
+openai>=1.30.0
+
 
